@@ -1,274 +1,193 @@
-import React, { useState, useRef } from 'react';
-import { Timer, Plus, Trash2, Play, Pause, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Play, Pause, RotateCcw, RefreshCw, Trash2, Plus, Timer } from 'lucide-react';
 
-interface Chronometer {
+interface Timer {
   id: string;
-  time: number; // In milliseconds
-  isRunning: boolean;
   name: string;
-  lastUpdateTime?: number;
+  time: number;
+  isRunning: boolean;
+  startTime: number | null;
 }
 
 function App() {
-  const [chronometers, setChronometers] = useState<Chronometer[]>([]);
-  const requestRef = useRef<number>(0); // Pour stocker l'ID de la dernière frame d'animation
-  const lastTimestampRef = useRef<number>(0);
+  const [timers, setTimers] = useState<Timer[]>(() => {
+    const saved = localStorage.getItem('timers');
+    if (!saved) return [];
 
-  const addChronometer = () => {
-    const newChronometer: Chronometer = {
+    const parsedTimers: Timer[] = JSON.parse(saved);
+    
+    // Calculate elapsed time for running timers since last save
+    return parsedTimers.map(timer => {
+      if (timer.isRunning && timer.startTime) {
+        const now = Date.now();
+        const elapsedSinceLastSave = now - timer.startTime;
+        console.log(timer.time, elapsedSinceLastSave, timer.time + elapsedSinceLastSave)
+        return {
+          ...timer,
+          time: timer.time + elapsedSinceLastSave,
+          startTime: now
+        };
+      }
+      return timer;
+    });
+  });
+  
+  const animationFrameRef = useRef<number>();
+
+  const updateTimers = useCallback((timestamp: number) => {
+    setTimers(prevTimers => {
+      const updatedTimers = prevTimers.map(timer => {
+        if (timer.isRunning && timer.startTime) {
+          const elapsed = Date.now() - timer.startTime;
+          return {
+            ...timer,
+            time: timer.time + elapsed,
+            startTime: Date.now()
+          };
+        }
+        return timer;
+      });
+      
+      // Save timers state on every update
+      localStorage.setItem('timers', JSON.stringify(updatedTimers));
+      return updatedTimers;
+    });
+
+    animationFrameRef.current = requestAnimationFrame(updateTimers);
+  }, []);
+
+  useEffect(() => {
+    if (timers.some(timer => timer.isRunning)) {
+      animationFrameRef.current = requestAnimationFrame(updateTimers);
+    }
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [timers, updateTimers]);
+
+  const addTimer = () => {
+    const newTimer: Timer = {
       id: crypto.randomUUID(),
+      name: 'Timer '+ (timers.length + 1),
       time: 0,
       isRunning: false,
-      name: `Timer ${chronometers.length + 1}`,
-      lastUpdateTime: undefined,
+      startTime: null
     };
-    setChronometers([...chronometers, newChronometer]);
-    // localStorage.setItem('chronometers', JSON.stringify([...chronometers, newChronometer]));
+    setTimers(prev => {
+      const newTimers = [...prev, newTimer];
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
   };
 
-  const pauseAllChronometers = () => {
-    setChronometers(chronometers.map(chrono => ({ ...chrono, isRunning: false, lastUpdateTime: undefined })));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.map(chrono => ({ ...chrono, isRunning: false, lastUpdateTime: undefined }))));
-  };
-  
-  const playAllChronometers = () => {
-    setChronometers(chronometers.map(chrono => ({ ...chrono, isRunning: true, lastUpdateTime: Date.now() })));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.map(chrono => ({ ...chrono, isRunning: true, lastUpdateTime: Date.now() }))));
-  };
-
-  const toggleChronometer = (id: string) => {
-    setChronometers(chronometers.map(chrono =>
-      chrono.id === id
-        ? {
-            ...chrono,
-            isRunning: !chrono.isRunning,
-            lastUpdateTime: !chrono.isRunning ? Date.now() : chrono.lastUpdateTime,
-          }
-        : chrono
-    ));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.map(chrono =>
-    //   chrono.id === id
-    //     ? {
-    //         ...chrono,
-    //         isRunning: !chrono.isRunning,
-    //         lastUpdateTime: !chrono.isRunning ? Date.now() : chrono.lastUpdateTime,
-    //       }
-    //     : chrono
-    // )));
+  const toggleTimer = (id: string) => {
+    const now = Date.now();
+    setTimers(prev => {
+      const newTimers = prev.map(timer => 
+        timer.id === id ? {
+          ...timer,
+          isRunning: !timer.isRunning,
+          startTime: !timer.isRunning ? now : null
+        } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
   };
 
-  const resetChronometer = (id: string) => {
-    setChronometers(chronometers.map(chrono =>
-      chrono.id === id ? { ...chrono, time: 0, isRunning: false } : chrono
-    ));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.map(chrono =>
-    //   chrono.id === id ? { ...chrono, time: 0, isRunning: false } : chrono
-    // )));
+  const resetTimer = (id: string) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer => 
+        timer.id === id ? {
+          ...timer,
+          time: 0,
+          isRunning: false,
+          startTime: null
+        } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
   };
 
-  const deleteChronometer = (id: string) => {
-    setChronometers(chronometers.filter(chrono => chrono.id !== id));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.filter(chrono => chrono.id !== id)));
+  const deleteTimer = (id: string) => {
+    setTimers(prev => {
+      const newTimers = prev.filter(timer => timer.id !== id);
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
   };
 
-  const updateName = (id: string, newName: string) => {
-    setChronometers(chronometers.map(chrono =>
-      chrono.id === id ? { ...chrono, name: newName } : chrono
-    ));
-    // localStorage.setItem('chronometers', JSON.stringify(chronometers.map(chrono =>
-    //   chrono.id === id ? { ...chrono, name: newName } : chrono
-    // )));
+  const updateTimerName = (id: string, name: string) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer => 
+        timer.id === id ? { ...timer, name } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
   };
 
-  // React.useEffect(() => {
-  //   if (Notification.permission === 'default') {
-  //     Notification.requestPermission().catch((error) =>
-  //       console.error('Notification permission error:', error)
-  //     );
-  //   }
-  //   // const savedChronometers = localStorage.getItem('chronometers');
-  //   // if (savedChronometers) {
-  //   //   setChronometers(JSON.parse(savedChronometers));
-  //   // }
-  // }, []);
+  const toggleAllTimers = () => {
+    const now = Date.now();
+    const allRunning = timers.every(timer => timer.isRunning);
+    setTimers(prev => {
+      const newTimers = prev.map(timer => ({
+        ...timer,
+        isRunning: !allRunning,
+        startTime: !allRunning ? now : null
+      }));
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  };
 
-  // React.useEffect(() => {
-  //   let animationFrameId: number;
-  
-  //   const updateChronometers = () => {
-  //     setChronometers(chronos =>
-  //       chronos.map(chrono => {
-  //         if (!chrono.isRunning) return chrono;
-  
-  //         const now = Date.now();
-  //         const elapsedTime = now - (chrono.lastUpdateTime || now);
-  
-  //         const newTime = chrono.time + elapsedTime;
-  //         return {
-  //           ...chrono,
-  //           time: newTime,
-  //           lastUpdateTime: now,
-  //         };
-  //       })
-  //     );
-  //     localStorage.setItem('chronometers', JSON.stringify(chronometers));
-  //     animationFrameId = requestAnimationFrame(updateChronometers);
-  //   };
-  
-  //   updateChronometers();
-  
-  //   return () => cancelAnimationFrame(animationFrameId);
-  // }, []);
-
-  // Mettre à jour les chronomètres à chaque frame
-  // React.useEffect(() => {
-  //   let animationFrameId: number;
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
     
-  //   const updateChronometers = () => {
-  //     setChronometers(chronos =>
-  //       chronos.map(chrono => {
-  //         if (!chrono.isRunning) return chrono;
-
-  //         const now = Date.now();
-  //         const elapsedTime = now - (chrono.lastUpdateTime || now);
-
-  //         const newTime = chrono.time + elapsedTime;
-
-  //         // Check if it's time to notify (1 minute = 60,000 ms)
-  //         if (newTime % 60000 < 1000 && newTime > 0) {
-  //           // Display notification
-  //           if (Notification.permission === 'granted') {
-  //             new Notification(`Timer ${chrono.name} - 1 minute of activity!`);
-  //           }
-  //         }
-
-  //         return {
-  //           ...chrono,
-  //           time: newTime,
-  //           lastUpdateTime: now,
-  //         };
-  //       })
-  //     );
-  //     // localStorage.setItem('chronometers', JSON.stringify(chronometers));
-  //     animationFrameId = requestAnimationFrame(updateChronometers);
-  //   };
-
-  //   updateChronometers();
-
-  //   return () => cancelAnimationFrame(animationFrameId);
-  // }, [chronometers]);
-
-  const formatTime = (milliseconds: number) => {
-    const hrs = Math.floor(milliseconds / 3600000);
-    const mins = Math.floor((milliseconds % 3600000) / 60000);
-    const secs = Math.floor((milliseconds % 60000) / 1000);
-    const ms = milliseconds % 1000;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs
-      .toString()
-      .padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
   };
-
-  const sendNotification = () => {
-    chronometers.forEach((chrono) => {
-      if (chrono.isRunning) {
-        const now = Date.now();
-        const elapsedTime = now - (chrono.lastUpdateTime || now);
-        const newTime = chrono.time + elapsedTime;
-
-        if (newTime % 60000 < 1000 && newTime > 0) {
-          if (Notification.permission === 'granted') {
-            new Notification(`Timer ${chrono.name} - 1 minute d'activité !`);
-          }
-        }
-        setChronometers((prev) => 
-          prev.map((c) => 
-            c.id === chrono.id 
-            ? { ...c, time: newTime, lastUpdateTime: now } 
-            : c
-          )
-        );
-      }
-    });
-  };
-
-  React.useEffect(() => {
-    if (Notification.permission === 'default') {
-      Notification.requestPermission().catch((error) => console.error('Notification permission error:', error));
-    }
-
-    const savedChronometers = localStorage.getItem('chronometers');
-    if (savedChronometers) {
-      setChronometers(JSON.parse(savedChronometers));
-    }
-
-    // Gestion de la visibilité de l'onglet pour activer les timers en arrière-plan
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        lastTimestampRef.current = Date.now();
-      } else {
-        // Réactive la logique du chronomètre quand l'onglet devient visible
-        chronometers.forEach((chrono) => {
-          if (chrono.isRunning) {
-            setChronometers((prev) =>
-              prev.map((c) =>
-                c.id === chrono.id
-                  ? { ...c, lastUpdateTime: Date.now() }
-                  : c
-              )
-            );
-          }
-        });
-      }
-    });
-
-    // Fonction pour gérer les animations et les mises à jour régulières des chronos
-    const update = (time: number) => {
-      chronometers.forEach((chrono) => {
-        if (chrono.isRunning) {
-          const now = Date.now();
-          const elapsedTime = now - (chrono.lastUpdateTime || now);
-          const newTime = chrono.time + elapsedTime;
-
-          setChronometers((prev) =>
-            prev.map((c) =>
-              c.id === chrono.id
-                ? { ...c, time: newTime, lastUpdateTime: now }
-                : c
-            )
-          );
-        }
-      });
-
-      // Continue l'animation frame
-      requestRef.current = requestAnimationFrame(update);
-    };
-
-    // Lancer l'animation frame
-    requestRef.current = requestAnimationFrame(update);
-
-    // Démarrer l'intervalle de notification
-    const notificationInterval = setInterval(sendNotification, 60000);
-
-    // Nettoyage lors du démontage
-    return () => {
-      cancelAnimationFrame(requestRef.current);
-      clearInterval(notificationInterval);
-    };
-  }, [chronometers]);
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
       <div className="max-w-12xl mx-auto">
+        {/* <div className="flex flex-col sm:flex-row justify-between items-center mb-8 space-y-4 sm:space-y-0">
+          <h1 className="text-3xl font-bold text-gray-800">Multi Timer</h1>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+            {timers.length > 0 && (
+              <button
+                      onClick={toggleAllTimers}
+                      className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+                    >
+                      {timers.every(timer => timer.isRunning) ? <PauseCircle className="mr-2" /> : <PlayCircle className="mr-2" />}
+                      {timers.every(timer => timer.isRunning) ? 'Pause All' : 'Play All'}
+              </button>
+            )}
+            
+            <button
+              onClick={addTimer}
+              className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+            >
+              <Plus className="mr-2" />
+              Add Timer
+            </button>
+          </div>
+        </div> */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
             <Timer className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Multi Timer</h1>
           </div>
           <div className="flex items-center gap-4">
-            {chronometers.length > 0 ? (
-              chronometers.find(elem => elem.isRunning) ? (
+            {timers.length > 0 ? (
+              timers.find(elem => elem.isRunning) ? (
                 <button
-                  onClick={pauseAllChronometers}
+                  onClick={toggleAllTimers}
                   className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Pause className="w-5 h-5" />
@@ -276,16 +195,16 @@ function App() {
                 </button>
               ) : (
                 <button
-                  onClick={playAllChronometers}
+                  onClick={toggleAllTimers}
                   className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Play className="w-5 h-5" />
-                  Play All
+                  Start All
                 </button>
               )
             ) : null}
             <button
-              onClick={addChronometer}
+              onClick={addTimer}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -294,64 +213,95 @@ function App() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {chronometers.map(chrono => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {timers.map(timer => (
             <div
-              key={chrono.id}
-              className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4"
-            >
-              <input
-                type="text"
-                value={chrono.name}
-                onChange={(e) => updateName(chrono.id, e.target.value)}
-                className="w-full text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
-              />
-              <div className="text-4xl font-mono text-center py-4">
-                {formatTime(chrono.time)}
-              </div>
-              <div className="flex justify-between">
+            key={timer.id}
+            className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4"
+          >
+            <input
+              type="text"
+              value={timer.name}
+              onChange={(e) => updateTimerName(timer.id, e.target.value)}
+              className="w-full text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
+            />
+            <div className="text-4xl font-mono text-center py-4">
+              {formatTime(timer.time)}
+            </div>
+            <div className="flex justify-between">
+              <button
+                onClick={() => toggleTimer(timer.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  timer.isRunning
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-green-100 text-green-600 hover:bg-green-200'
+                }`}
+              >
+                {timer.isRunning ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Start
+                  </>
+                )}
+              </button>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => toggleChronometer(chrono.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    chrono.isRunning
-                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                      : 'bg-green-100 text-green-600 hover:bg-green-200'
-                  }`}
+                  onClick={() => resetTimer(timer.id)}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  {chrono.isRunning ? (
-                    <>
-                      <Pause className="w-4 h-4" />
-                      Pause
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Start
-                    </>
-                  )}
+                  <RefreshCw className="w-5 h-5" />
                 </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => resetChronometer(chrono.id)}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => deleteChronometer(chrono.id)}
-                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => deleteTimer(timer.id)}
+                  className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             </div>
+          </div>
+            // <div key={timer.id} className="bg-white p-6 rounded-lg shadow-md">
+            //   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
+            //     <input
+            //       type="text"
+            //       value={timer.name}
+            //       onChange={(e) => updateTimerName(timer.id, e.target.value)}
+            //       className="text-xl font-semibold bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none px-2 py-1 w-full sm:w-auto"
+            //     />
+            //     <div className="text-2xl font-mono">{formatTime(timer.time)}</div>
+            //   </div>
+            //   <div className="flex justify-end space-x-2 mt-4">
+            //     <button
+            //       onClick={() => toggleTimer(timer.id)}
+            //       className={`p-2 rounded-lg ${timer.isRunning ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} hover:opacity-80 transition-opacity`}
+            //     >
+            //       {timer.isRunning ? <Pause size={20} /> : <Play size={20} />}
+            //     </button>
+            //     <button
+            //       onClick={() => resetTimer(timer.id)}
+            //       className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:opacity-80 transition-opacity"
+            //     >
+            //       <RotateCcw size={20} />
+            //     </button>
+            //     <button
+            //       onClick={() => deleteTimer(timer.id)}
+            //       className="p-2 rounded-lg bg-red-100 text-red-700 hover:opacity-80 transition-opacity"
+            //     >
+            //       <Trash2 size={20} />
+            //     </button>
+            //   </div>
+            // </div>
           ))}
         </div>
 
-        {chronometers.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No chronometers yet. Click the "Add Timer" button to create one!</p>
+        {timers.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            No timers yet. Click "Add Timer" to create one!
           </div>
         )}
       </div>

@@ -24,6 +24,7 @@ interface Timer {
   time: number;
   isRunning: boolean;
   startTime: number | null;
+  hasBeenRendered?: boolean;
 }
 
 interface SortableTimerProps {
@@ -32,10 +33,15 @@ interface SortableTimerProps {
   onReset: (id: string) => void;
   onDelete: (id: string) => void;
   onNameChange: (id: string, name: string) => void;
-  formatTime: (ms: number) => string;
+  onHourChange: (id: string, hour: number) => void;
+  onMinuteChange: (id: string, minute: number) => void;
+  onSecondChange: (id: string, second: number) => void;
+  formatTime: (ms: number) => { hours: number, minutes: number, seconds: number, milliseconds: number };
+  onRender?: () => void;
+  showMilliseconds: boolean;
 }
 
-function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, formatTime }: SortableTimerProps) {
+function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHourChange, onMinuteChange, onSecondChange, formatTime, onRender, showMilliseconds }: SortableTimerProps) {
   const {
     attributes,
     listeners,
@@ -44,6 +50,9 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
     transition,
     isDragging,
   } = useSortable({ id: timer.id });
+  const [isHourEditing, setIsHourEditing] = useState(false);
+  const [isMinuteEditing, setIsMinuteEditing] = useState(false);
+  const [isSecondEditing, setIsSecondEditing] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -51,11 +60,19 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
     opacity: isDragging ? 0.5 : 1,
   };
 
+  useEffect(() => {
+    if (onRender) {
+      setTimeout(() => {
+        onRender();
+      }, 300);
+    }
+  }, []);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 ${!isDragging ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
+      className={`bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
     >
       <div className="flex items-center gap-2 touch-none">
         <div
@@ -72,8 +89,44 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
           className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
         />
       </div>
-      <div className="text-4xl font-mono text-center py-4">
-        {formatTime(timer.time)}
+      <div className="text-4xl font-mono py-4 text-center flex justify-center">
+        <div onClick={() => !timer.isRunning && setIsHourEditing(true)} className={`${isHourEditing ? 'hidden' : 'block'}`}>
+          {formatTime(timer.time).hours.toString().padStart(2, '0')}
+        </div>
+        <input
+          type="number"
+          defaultValue={formatTime(timer.time).hours}
+          onBlur={(e) => { onHourChange(timer.id, e.target.value ? parseInt(e.target.value) : 0), setIsHourEditing(false) }}
+          className={`text-4xl w-full font-mono text-center border-b focus:border-indigo-600 focus:outline-none ${isHourEditing ? 'block' : 'hidden'} w-[2ch]`}
+        />
+        :
+        <div onClick={() => !timer.isRunning && setIsMinuteEditing(true)} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
+          {(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
+        </div>
+        <input
+          type="number"
+          defaultValue={(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
+          onBlur={(e) => { onMinuteChange(timer.id, e.target.value ? parseInt(e.target.value) : 0), setIsMinuteEditing(false) }}
+          className={`text-4xl w-full font-mono text-center border-b focus:border-indigo-600 focus:outline-none ${isMinuteEditing ? 'block' : 'hidden'} w-[2ch]`}
+        />
+        :
+        <div onClick={() => !timer.isRunning && setIsSecondEditing(true)} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
+          {(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
+        </div>
+        <input
+          type="number"
+          defaultValue={(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
+          onBlur={(e) => { onSecondChange(timer.id, e.target.value ? parseInt(e.target.value) : 0), setIsSecondEditing(false) }}
+          className={`text-4xl w-full font-mono text-center border-b focus:border-indigo-600 focus:outline-none ${isSecondEditing ? 'block' : 'hidden'} w-[2ch]`}
+        />
+        {showMilliseconds && (
+          <>
+            :
+            <div>
+              {formatTime(timer.time).milliseconds.toString().padStart(3, '0')}
+            </div>
+          </>
+        )}
       </div>
       <div className="flex justify-between">
         <button
@@ -194,13 +247,23 @@ function App() {
     localStorage.setItem('showMilliseconds', JSON.stringify(showMilliseconds));
   }, [showMilliseconds]);
 
+  const setTimerIsRendered = (id: string) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, hasBeenRendered: true } : timer
+      );
+      return newTimers;
+    });
+  };
+
   const addTimer = () => {
     const newTimer: Timer = {
       id: crypto.randomUUID(),
       name: 'Timer ' + (timers.length + 1),
       time: 0,
       isRunning: false,
-      startTime: null
+      startTime: null,
+      hasBeenRendered: false
     };
     setTimers(prev => {
       const newTimers = [...prev, newTimer];
@@ -208,6 +271,18 @@ function App() {
       return newTimers;
     });
   };
+
+  const deleteAllTimers = () => {
+    timers.forEach(timer => {
+      const element = document.getElementById(`timer-${timer.id}`);
+      if (element) {
+        element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
+        setTimeout(() => setTimers([]), 300);
+      } else {
+        setTimers([]);
+      }
+    });
+  }
 
   const toggleTimer = (id: string) => {
     const now = Date.now();
@@ -257,6 +332,37 @@ function App() {
     });
   };
 
+  const updateTimerHour = (id: string, hour: number) => {
+    console.log(hour);
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, time: timer.time + hour * 3600000 } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  }
+
+  const updateTimerMinute = (id: string, minute: number) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, time: timer.time + minute * 60000 } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  }
+
+  const updateTimerSecond = (id: string, second: number) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, time: timer.time + second * 1000 } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  }
+
   const toggleAllTimers = () => {
     const now = Date.now();
     const allRunning = timers.every(timer => timer.isRunning);
@@ -292,7 +398,8 @@ function App() {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
 
-    return `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}${showMilliseconds ? `.${milliseconds.toString().padStart(3, '0')}` : ''}`;
+    return { hours, minutes, seconds, milliseconds };
+    //`${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}${showMilliseconds ? `.${milliseconds.toString().padStart(3, '0')}` : ''}`;
   };
 
   return (
@@ -315,6 +422,14 @@ function App() {
               <Clock className="w-5 h-5 hidden sm:inline" />
               <span>ms</span>
             </button>
+            {timers.length > 0 && (
+              <button
+                onClick={deleteAllTimers}
+                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
             {timers.length > 0 ? (
               timers.find(elem => elem.isRunning) ? (
                 <button
@@ -357,12 +472,17 @@ function App() {
               {timers.map((timer) => (
                 <div key={timer.id} id={`timer-${timer.id}`}>
                   <SortableTimer
+                    onRender={() => setTimerIsRendered(timer.id)}
                     timer={timer}
                     onToggle={toggleTimer}
                     onReset={resetTimer}
                     onDelete={deleteTimer}
                     onNameChange={updateTimerName}
+                    onHourChange={updateTimerHour}
+                    onMinuteChange={updateTimerMinute}
+                    onSecondChange={updateTimerSecond}
                     formatTime={formatTime}
+                    showMilliseconds={showMilliseconds}
                   />
                 </div>
               ))}

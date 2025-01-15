@@ -49,7 +49,6 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    touchAction: 'none',
   };
 
   return (
@@ -58,7 +57,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
       style={style}
       className={`bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 ${!isDragging ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 touch-none">
         <div
           {...attributes}
           {...listeners}
@@ -80,8 +79,8 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, forma
         <button
           onClick={() => onToggle(timer.id)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${timer.isRunning
-              ? 'bg-red-100 text-red-600 hover:bg-red-200'
-              : 'bg-green-100 text-green-600 hover:bg-green-200'
+            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+            : 'bg-green-100 text-green-600 hover:bg-green-200'
             }`}
         >
           {timer.isRunning ? (
@@ -308,8 +307,8 @@ function App() {
             <button
               onClick={() => setShowMilliseconds(prev => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showMilliseconds
-                  ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               title="Toggle milliseconds display"
             >

@@ -427,6 +427,11 @@ function App() {
     //`${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}${showMilliseconds ? `.${milliseconds.toString().padStart(3, '0')}` : ''}`;
   };
 
+  const getTotalTime = () => {
+    const totalms = timers.reduce((acc, timer) => acc + timer.time, 0);
+    return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
       <div className="max-w-12xl mx-auto">
@@ -434,6 +439,7 @@ function App() {
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
             <Timer className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Multi Timer</h1>
+            {timers.length > 0 && <h1 className="text-2xl sm:text-3xl text-gray-800">{getTotalTime()}</h1>}
           </div>
           {/* On multiple rows on mobile */}
           <div className="flex items-center gap-4">

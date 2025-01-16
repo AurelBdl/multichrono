@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RotateCcw, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -93,48 +93,55 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
         <input
           type="text"
           value={timer.name}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => onNameChange(timer.id, e.target.value)}
           className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
         />
       </div>
       <div className="text-4xl font-mono py-4 text-center flex justify-center">
-        <div onClick={() => !timer.isRunning && setIsHourEditing(true)} className={`${isHourEditing ? 'hidden' : 'block'}`}>
+        <div onClick={() => {if (!timer.isRunning) setIsHourEditing(true); setTimeout(() => document.getElementById('hour-'+timer.id)?.focus())}} className={`${isHourEditing ? 'hidden' : 'block'}`}>
           {formatTime(timer.time).hours.toString().padStart(2, '0')}
         </div>
         {isHourEditing && (
           <input
+            id={`hour-${timer.id}`}
             type="number"
             max={99}
             min={0}
             defaultValue={formatTime(timer.time).hours.toString().padStart(2, '0')}
+            onFocus={(e) => e.target.select()}
             onBlur={(e) => { onHourChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsHourEditing(false) }}
             className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
           />
         )}
         :
-        <div onClick={() => !timer.isRunning && setIsMinuteEditing(true)} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
+        <div onClick={() => {if (!timer.isRunning) setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-'+timer.id)?.focus())}} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
           {(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
         </div>
         {isMinuteEditing && (
           <input
             type="number"
+            id={`minute-${timer.id}`}
             max={59}
             min={0}
             defaultValue={(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
+            onFocus={(e) => e.target.select()}
             onBlur={(e) => { onMinuteChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsMinuteEditing(false) }}
             className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
           />
         )}
         :
-        <div onClick={() => !timer.isRunning && setIsSecondEditing(true)} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
+        <div onClick={() => {if (!timer.isRunning) setIsSecondEditing(true); setTimeout(() => document.getElementById('second-'+timer.id)?.focus())}} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
           {(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
         </div>
         {isSecondEditing && (
           <input
             type="number"
+            id={`second-${timer.id}`}
             max={59}
             min={0}
             defaultValue={(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
+            onFocus={(e) => e.target.select()}
             onBlur={(e) => { onSecondChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsSecondEditing(false) }}
             className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
           />
@@ -198,10 +205,19 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
 function App() {
   const [timers, setTimers] = useState<Timer[]>(() => {
     const saved = localStorage.getItem('timers');
-    if (!saved) return [];
-
+    if (!saved || saved.length == 0) {
+      return [
+        {
+          id: crypto.randomUUID(),
+          name: 'Timer 1',
+          time: 0,
+          isRunning: false,
+          startTime: null,
+          hasBeenRendered: false
+        }
+      ];
+    }
     const parsedTimers: Timer[] = JSON.parse(saved);
-
     return parsedTimers.map(timer => {
       if (timer.isRunning && timer.startTime) {
         const now = Date.now();
@@ -220,7 +236,10 @@ function App() {
     const saved = localStorage.getItem('showMilliseconds');
     return saved ? JSON.parse(saved) : false;
   });
-
+  const [isSimpleMode, setIsSimpleMode] = useState(() => {
+    const saved = localStorage.getItem('isSimpleMode');
+    return saved ? JSON.parse(saved) : true;
+  });
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -309,6 +328,21 @@ function App() {
 
   const toggleTimer = (id: string) => {
     blurAllInputs();
+    const timer = timers.find(timer => timer.id === id);
+    if (isSimpleMode && timer && !timer.isRunning) {
+      //Pause all running timers before starting the new one
+      setTimers(prev => {
+        const newTimers = prev.map(timer =>
+          timer.isRunning ? {
+            ...timer,
+            isRunning: false,
+            startTime: null
+          } : timer
+        );
+        localStorage.setItem('timers', JSON.stringify(newTimers));
+        return newTimers;
+      });
+    }
     const now = Date.now();
     setTimers(prev => {
       const newTimers = prev.map(timer =>
@@ -424,7 +458,6 @@ function App() {
     const hours = Math.floor(minutes / 60);
 
     return { hours, minutes, seconds, milliseconds };
-    //`${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}${showMilliseconds ? `.${milliseconds.toString().padStart(3, '0')}` : ''}`;
   };
 
   const getTotalTime = () => {
@@ -439,7 +472,7 @@ function App() {
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
             <Timer className="w-8 h-8 text-indigo-600" />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Multi Timer</h1>
-            {timers.length > 0 && <h1 className="text-2xl sm:text-3xl text-gray-800">{getTotalTime()}</h1>}
+            {timers.length > 1 && <h1 className="text-2xl sm:text-3xl text-gray-800">{getTotalTime()}</h1>}
           </div>
           {/* On multiple rows on mobile */}
           <div className="flex items-center gap-4">
@@ -451,13 +484,13 @@ function App() {
                 }`}
               title="Toggle milliseconds display"
             >
-              <Clock className="w-5 h-5 hidden sm:inline" />
+              <Clock className="w-6 h-6 hidden sm:inline" />
               <span>ms</span>
             </button>
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={deleteAllTimers} />
             )}
-            {timers.length > 0 ? (
+            {timers.length > 0 && !isSimpleMode ? (
               timers.find(elem => elem.isRunning) ? (
                 <button
                   onClick={toggleAllTimers}
@@ -482,6 +515,16 @@ function App() {
             >
               <Plus className="w-6 h-6" />
               <span className="hidden sm:inline">Add Timer</span>
+            </button>
+            <button
+              onClick={() => setIsSimpleMode(prev => !prev)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${!isSimpleMode
+                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              title={isSimpleMode ? "Switch to multi mode" : "Switch to simple mode"}
+            >
+              {!isSimpleMode ? <Square className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
             </button>
           </div>
         </div>

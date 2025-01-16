@@ -436,7 +436,7 @@ function App() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Multi Timer</h1>
           </div>
           {/* On multiple rows on mobile */}
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setShowMilliseconds(prev => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showMilliseconds
@@ -457,8 +457,8 @@ function App() {
                   onClick={toggleAllTimers}
                   className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                 >
-                  <Pause className="w-5 h-5" />
-                  Pause All
+                  <Pause className="w-6 h-6" />
+                  <span className="hidden sm:inline">Pause All</span>
                 </button>
               ) : (
                 <button
@@ -466,7 +466,7 @@ function App() {
                   className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Play className="w-6 h-6" />
-                  Start All
+                  <span className="hidden sm:inline">Start All</span>
                 </button>
               )
             ) : null}
@@ -475,7 +475,7 @@ function App() {
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-6 h-6" />
-              Add Timer
+              <span className="hidden sm:inline">Add Timer</span>
             </button>
           </div>
         </div>

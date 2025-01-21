@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -40,6 +40,7 @@ interface SortableTimerProps {
   formatTime: (ms: number) => { hours: number, minutes: number, seconds: number, milliseconds: number };
   onRender?: () => void;
   showMilliseconds: boolean;
+  showDecimalTime: boolean;
 }
 
 const blurAllInputs = () => {
@@ -49,7 +50,7 @@ const blurAllInputs = () => {
   });
 };
 
-function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHourChange, onMinuteChange, onSecondChange, formatTime, onRender, showMilliseconds }: SortableTimerProps) {
+function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHourChange, onMinuteChange, onSecondChange, formatTime, onRender, showMilliseconds, showDecimalTime }: SortableTimerProps) {
   const {
     attributes,
     listeners,
@@ -76,13 +77,29 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
     }
   }, []);
 
+  const convertToDecimalTime = ({ hour, minutes }: { hour: number, minutes: number }) => {
+    // Vérification des paramètres
+    if (typeof hour !== 'number' || typeof minutes !== 'number') {
+      throw new Error('Les propriétés hour et minutes doivent être des nombres.');
+    }
+  
+    // Calcul des heures décimales
+    let decimalTime = hour + minutes / 60;
+  
+    // Arrondir au multiple de 0,05 le plus proche
+    decimalTime = Math.round(decimalTime * 20) / 20;
+  
+    return decimalTime;
+  }
+  
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-4 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
+      className={`bg-white items-center rounded-lg shadow-md p-4 sm:p-6 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
     >
-      <div className="flex items-center gap-2 touch-none">
+      <div className="flex items-center gap-2 touch-none mb-10">
         <div
           {...attributes}
           {...listeners}
@@ -98,7 +115,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
           className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
         />
       </div>
-      <div className="text-4xl font-mono py-4 text-center flex justify-center">
+      <div className={`relative text-4xl font-mono text-center flex justify-center`}>
         <div onClick={() => {if (!timer.isRunning) setIsHourEditing(true); setTimeout(() => document.getElementById('hour-'+timer.id)?.focus())}} className={`${isHourEditing ? 'hidden' : 'block'}`}>
           {formatTime(timer.time).hours.toString().padStart(2, '0')}
         </div>
@@ -154,7 +171,15 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
             </div>
           </>
         )}
+        {showDecimalTime && (
+        <div className={`absolute bottom-0 text-xl font-mono text-center flex justify-center ${!showMilliseconds ? 'start-2/3' : 'start-3/4'}`}>
+          <div>
+            {convertToDecimalTime({ hour: formatTime(timer.time).hours, minutes: formatTime(timer.time).minutes % 60})+'h'}
+          </div>
+        </div>
+      )}
       </div>
+      
       <div className="flex justify-between">
         <button
           onClick={() => onToggle(timer.id)}
@@ -236,6 +261,10 @@ function App() {
     const saved = localStorage.getItem('showMilliseconds');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showDecimalTime, setShowDecimalTime] = useState(() => {
+    const saved = localStorage.getItem('showDecimalTime');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [isSimpleMode, setIsSimpleMode] = useState(() => {
     const saved = localStorage.getItem('isSimpleMode');
     return saved ? JSON.parse(saved) : true;
@@ -285,6 +314,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('showMilliseconds', JSON.stringify(showMilliseconds));
   }, [showMilliseconds]);
+
+  useEffect(() => {
+    localStorage.setItem('showDecimalTime', JSON.stringify(showDecimalTime));
+  }, [showDecimalTime]);
 
   const setTimerIsRendered = (id: string) => {
     setTimers(prev => {
@@ -391,7 +424,6 @@ function App() {
   };
 
   const updateTimerHour = (id: string, hour: number, prevHour: number) => {
-    console.log(hour);
     setTimers(prev => {
       const newTimers = prev.map(timer =>
         timer.id === id ? { ...timer, time: timer.time - prevHour * 3600000 + hour * 3600000 } : timer
@@ -477,7 +509,7 @@ function App() {
           {/* On multiple rows on mobile */}
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowMilliseconds(prev => !prev)}
+              onClick={() => setShowMilliseconds((prev: boolean) => !prev)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showMilliseconds
                 ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -526,6 +558,16 @@ function App() {
             >
               {!isSimpleMode ? <Square className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
             </button>
+            <button
+              onClick={() => setShowDecimalTime((prev: boolean) => !prev)}
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showDecimalTime
+                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              title="Toggle decimal time format"
+            >
+              <Hourglass className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
@@ -553,6 +595,7 @@ function App() {
                     onSecondChange={updateTimerSecond}
                     formatTime={formatTime}
                     showMilliseconds={showMilliseconds}
+                    showDecimalTime={showDecimalTime}
                   />
                 </div>
               ))}

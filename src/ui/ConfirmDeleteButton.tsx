@@ -30,9 +30,9 @@ export default function ConfirmDeleteButton({ onDelete }: { onDelete: () => void
     <button
       ref={ref}
       onClick={handleClick}
-      className={`flex items-center py-2 overflow-hidden rounded-lg text-white justify-center transition-all duration-300 ease-in-out bg-red-600 hover:bg-red-700`}
+      className={`flex items-center p-2 overflow-hidden rounded-lg text-white justify-center transition-all duration-300 ease-in-out bg-red-600 hover:bg-red-700`}
       style={{
-        width: state === "idle" ? "3.5rem" : "5.5rem",
+        width: state === "idle" ? "2.5rem" : "4.5rem",
       }}
     >
       <Trash2 className="w-6 h-6" />

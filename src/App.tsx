@@ -99,7 +99,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
       style={style}
       className={`bg-white items-center rounded-lg shadow-md p-4 sm:p-6 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
     >
-      <div className="flex items-center gap-2 touch-none mb-10">
+      <div className="flex items-center gap-2 mb-10">
         <div
           {...attributes}
           {...listeners}
@@ -115,7 +115,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
           className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
         />
       </div>
-      <div className={`relative text-4xl font-mono text-center flex justify-center`}>
+      <div className={`text-4xl font-mono text-center flex justify-center ${!showDecimalTime ? 'mb-10' : ''}`}>
         <div onClick={() => {if (!timer.isRunning) setIsHourEditing(true); setTimeout(() => document.getElementById('hour-'+timer.id)?.focus())}} className={`${isHourEditing ? 'hidden' : 'block'}`}>
           {formatTime(timer.time).hours.toString().padStart(2, '0')}
         </div>
@@ -171,14 +171,14 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
             </div>
           </>
         )}
-        {showDecimalTime && (
-        <div className={`absolute bottom-0 text-xl font-mono text-center flex justify-center ${!showMilliseconds ? 'start-2/3' : 'start-3/4'}`}>
+      </div>
+      {showDecimalTime && (
+        <div className={`top-0 right-0 text-xl font-mono text-center flex justify-center mb-3`}>
           <div>
             {convertToDecimalTime({ hour: formatTime(timer.time).hours, minutes: formatTime(timer.time).minutes % 60})+'h'}
           </div>
         </div>
       )}
-      </div>
       
       <div className="flex justify-between">
         <button
@@ -508,17 +508,6 @@ function App() {
           </div>
           {/* On multiple rows on mobile */}
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowMilliseconds((prev: boolean) => !prev)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showMilliseconds
-                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              title="Toggle milliseconds display"
-            >
-              <Clock className="w-6 h-6 hidden sm:inline" />
-              <span>ms</span>
-            </button>
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={deleteAllTimers} />
             )}
@@ -526,7 +515,7 @@ function App() {
               timers.find(elem => elem.isRunning) ? (
                 <button
                   onClick={toggleAllTimers}
-                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  className="flex items-center gap-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Pause className="w-6 h-6" />
                   <span className="hidden sm:inline">Pause All</span>
@@ -534,7 +523,7 @@ function App() {
               ) : (
                 <button
                   onClick={toggleAllTimers}
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex items-center gap-2 bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Play className="w-6 h-6" />
                   <span className="hidden sm:inline">Start All</span>
@@ -543,14 +532,14 @@ function App() {
             ) : null}
             <button
               onClick={addTimer}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-6 h-6" />
               <span className="hidden sm:inline">Add Timer</span>
             </button>
             <button
               onClick={() => setIsSimpleMode(prev => !prev)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${!isSimpleMode
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${!isSimpleMode
                 ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
@@ -560,13 +549,24 @@ function App() {
             </button>
             <button
               onClick={() => setShowDecimalTime((prev: boolean) => !prev)}
-              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showDecimalTime
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showDecimalTime
                 ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               title="Toggle decimal time format"
             >
               <Hourglass className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => setShowMilliseconds((prev: boolean) => !prev)}
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showMilliseconds
+                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              title="Toggle milliseconds display"
+            >
+              <Clock className="w-6 h-6 hidden sm:inline" />
+              <span>ms</span>
             </button>
           </div>
         </div>

@@ -328,10 +328,10 @@ function App() {
     });
   };
 
-  const addTimer = () => {
+  const addTimer = (name?: string) => {
     const newTimer: Timer = {
       id: crypto.randomUUID(),
-      name: 'Timer ' + (timers.length + 1),
+      name: name ? name : 'Timer ' + (timers.length + 1),
       time: 0,
       isRunning: false,
       startTime: null,
@@ -497,8 +497,73 @@ function App() {
     return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
   }
 
+  const handlePaste = async () => {
+    const text = await navigator.clipboard.readText();
+    if (text.startsWith('https://trello.com/c/')) {
+      const title = extractTitleFromTrelloUrl(text);
+      addTimer(title);
+    }
+    else {
+      addTimer(text);
+    }
+  };
+
+  const extractTitleFromTrelloUrl = (url) => {
+    // Extraire la partie après le dernier "/"
+    const lastPart = url.split('/').pop();
+  
+    // Extraire le texte après le dernier "-"
+    const encodedTitle = lastPart.split('-').slice(1).join('-');
+  
+    // Décoder les caractères encodés en UTF-8
+    const decodedTitle = decodeURIComponent(encodedTitle);
+  
+    return decodedTitle.replace(/-/g, ' '); // Remplacer les "-" par des espaces
+  }
+  
+
+  const handleContextMenu = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('.timer-container')) {
+      return;
+    }
+    event.preventDefault();
+    const menu = document.getElementById('context-menu');
+    if (menu) {
+      menu.style.top = `${event.clientY}px`;
+      menu.style.left = `${event.clientX}px`;
+      menu.style.display = 'block';
+    }
+  };
+
+  const handleClick = () => {
+    const menu = document.getElementById('context-menu');
+    if (menu) {
+      menu.style.display = 'none';
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 'v' && document.activeElement?.tagName !== 'INPUT') {
+        handlePaste();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleClick);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-8" onContextMenu={handleContextMenu}>
+      <div id="context-menu" className="hidden fixed bg-white shadow-md rounded-lg z-50">
+        <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Paste</button>
+      </div>
       <div className="max-w-12xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
@@ -582,7 +647,7 @@ function App() {
               strategy={rectSortingStrategy}
             >
               {timers.map((timer) => (
-                <div key={timer.id} id={`timer-${timer.id}`}>
+                <div key={timer.id} id={`timer-${timer.id}`} className="timer-container">
                   <SortableTimer
                     onRender={() => setTimerIsRendered(timer.id)}
                     timer={timer}

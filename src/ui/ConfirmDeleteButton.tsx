@@ -13,10 +13,10 @@ export default function ConfirmDeleteButton({ onDelete }: { onDelete: () => void
 
   const handleClick = () => {
     if (state === "idle") {
-      setState("confirm"); // Expand to show "Delete"
+      setState("confirm");
     } else if (state === "confirm") {
-      onDelete(); // Execute delete
-      setState("idle"); // Reset to initial state
+      onDelete();
+      setState("idle");
     }
   };
 
@@ -30,16 +30,15 @@ export default function ConfirmDeleteButton({ onDelete }: { onDelete: () => void
     <button
       ref={ref}
       onClick={handleClick}
-      className={`flex items-center p-2 overflow-hidden rounded-lg text-white justify-center transition-all duration-300 ease-in-out bg-red-600 hover:bg-red-700`}
+      className={`flex items-center p-2 overflow-hidden rounded-lg text-white justify-center transition-all duration-300 ease-in-out bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600`}
       style={{
         width: state === "idle" ? "2.5rem" : "4.5rem",
       }}
     >
       <Trash2 className="w-6 h-6" />
       <span
-        className={`ml-2 ${
-          state === "idle" ? "hidden" : "visible"
-        }`}
+        className={`ml-2 ${state === "idle" ? "hidden" : "visible"
+          }`}
       >
         All
       </span>

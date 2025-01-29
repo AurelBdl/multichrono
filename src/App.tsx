@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass, Sun, Moon } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -78,45 +78,40 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
   }, []);
 
   const convertToDecimalTime = ({ hour, minutes }: { hour: number, minutes: number }) => {
-    // Vérification des paramètres
     if (typeof hour !== 'number' || typeof minutes !== 'number') {
       throw new Error('Les propriétés hour et minutes doivent être des nombres.');
     }
-  
-    // Calcul des heures décimales
+
     let decimalTime = hour + minutes / 60;
-  
-    // Arrondir au multiple de 0,05 le plus proche
     decimalTime = Math.round(decimalTime * 20) / 20;
-  
+
     return decimalTime;
   }
-  
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white items-center rounded-lg shadow-md p-4 sm:p-6 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
+      className={`bg-white dark:bg-gray-800 items-center rounded-lg shadow-md p-4 sm:p-6 ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
     >
       <div className="flex items-center gap-2 mb-10">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded touch-none"
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded touch-none"
         >
-          <GripVertical className="w-5 h-5 text-gray-400" />
+          <GripVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
         </div>
         <input
           type="text"
           value={timer.name}
           onFocus={(e) => e.target.select()}
           onChange={(e) => onNameChange(timer.id, e.target.value)}
-          className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 focus:border-indigo-600 focus:outline-none pb-1"
+          className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none pb-1 dark:text-white"
         />
       </div>
-      <div className={`text-4xl font-mono text-center flex justify-center ${!showDecimalTime ? 'mb-10' : ''}`}>
-        <div onClick={() => {if (!timer.isRunning) setIsHourEditing(true); setTimeout(() => document.getElementById('hour-'+timer.id)?.focus())}} className={`${isHourEditing ? 'hidden' : 'block'}`}>
+      <div className={`text-4xl font-mono text-center flex justify-center ${!showDecimalTime ? 'mb-10' : ''} dark:text-white`}>
+        <div onClick={() => { if (!timer.isRunning) setIsHourEditing(true); setTimeout(() => document.getElementById('hour-' + timer.id)?.focus()) }} className={`${isHourEditing ? 'hidden' : 'block'}`}>
           {formatTime(timer.time).hours.toString().padStart(2, '0')}
         </div>
         {isHourEditing && (
@@ -128,11 +123,11 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
             defaultValue={formatTime(timer.time).hours.toString().padStart(2, '0')}
             onFocus={(e) => e.target.select()}
             onBlur={(e) => { onHourChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsHourEditing(false) }}
-            className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
+            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
         :
-        <div onClick={() => {if (!timer.isRunning) setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-'+timer.id)?.focus())}} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
+        <div onClick={() => { if (!timer.isRunning) setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-' + timer.id)?.focus()) }} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
           {(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
         </div>
         {isMinuteEditing && (
@@ -144,11 +139,11 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
             defaultValue={(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
             onFocus={(e) => e.target.select()}
             onBlur={(e) => { onMinuteChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsMinuteEditing(false) }}
-            className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
+            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
         :
-        <div onClick={() => {if (!timer.isRunning) setIsSecondEditing(true); setTimeout(() => document.getElementById('second-'+timer.id)?.focus())}} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
+        <div onClick={() => { if (!timer.isRunning) setIsSecondEditing(true); setTimeout(() => document.getElementById('second-' + timer.id)?.focus()) }} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
           {(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
         </div>
         {isSecondEditing && (
@@ -160,7 +155,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
             defaultValue={(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
             onFocus={(e) => e.target.select()}
             onBlur={(e) => { onSecondChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsSecondEditing(false) }}
-            className={`text-4xl font-mono text-center border-b focus:border-indigo-600 focus:outline-none w-[2ch]`}
+            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
         {showMilliseconds && (
@@ -173,19 +168,19 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
         )}
       </div>
       {showDecimalTime && (
-        <div className={`top-0 right-0 text-xl font-mono text-center flex justify-center mb-3`}>
+        <div className={`top-0 right-0 text-xl font-mono text-center flex justify-center mb-3 dark:text-white`}>
           <div>
-            {convertToDecimalTime({ hour: formatTime(timer.time).hours, minutes: formatTime(timer.time).minutes % 60})+'h'}
+            {convertToDecimalTime({ hour: formatTime(timer.time).hours, minutes: formatTime(timer.time).minutes % 60 }) + 'h'}
           </div>
         </div>
       )}
-      
+
       <div className="flex justify-between">
         <button
           onClick={() => onToggle(timer.id)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${timer.isRunning
-            ? 'bg-red-100 text-red-600 hover:bg-red-200'
-            : 'bg-green-100 text-green-600 hover:bg-green-200'
+            ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/70'
+            : 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/70'
             }`}
         >
           {timer.isRunning ? (
@@ -203,7 +198,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
         <div className="flex gap-2">
           <button
             onClick={() => onReset(timer.id)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
@@ -217,7 +212,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
                 onDelete(timer.id);
               }
             }}
-            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -269,6 +264,20 @@ function App() {
     const saved = localStorage.getItem('isSimpleMode');
     return saved ? JSON.parse(saved) : true;
   });
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('isDarkMode');
+    return saved ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -328,10 +337,10 @@ function App() {
     });
   };
 
-  const addTimer = (name?: string) => {
+  const addTimer = ({ name = 'Timer ' + (timers.length + 1) }: { name: string }) => {
     const newTimer: Timer = {
       id: crypto.randomUUID(),
-      name: name ? name : 'Timer ' + (timers.length + 1),
+      name: name,
       time: 0,
       isRunning: false,
       startTime: null,
@@ -349,21 +358,18 @@ function App() {
       const element = document.getElementById(`timer-${timer.id}`);
       if (element) {
         element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
-        setTimeout(() => {setTimers([]); localStorage.removeItem('timers')}, 300);
+        setTimeout(() => { setTimers([]); localStorage.removeItem('timers') }, 300);
       } else {
         setTimers([]);
         localStorage.removeItem('timers');
       }
     });
-    // setTimeout(() => setTimers([]), 300);
-    // setTimers([]);
   }
 
   const toggleTimer = (id: string) => {
     blurAllInputs();
     const timer = timers.find(timer => timer.id === id);
     if (isSimpleMode && timer && !timer.isRunning) {
-      //Pause all running timers before starting the new one
       setTimers(prev => {
         const newTimers = prev.map(timer =>
           timer.isRunning ? {
@@ -501,26 +507,19 @@ function App() {
     const text = await navigator.clipboard.readText();
     if (text.startsWith('https://trello.com/c/')) {
       const title = extractTitleFromTrelloUrl(text);
-      addTimer(title);
+      addTimer({ name: title });
     }
     else {
-      addTimer(text);
+      addTimer({ name: text });
     }
   };
 
   const extractTitleFromTrelloUrl = (url) => {
-    // Extraire la partie après le dernier "/"
     const lastPart = url.split('/').pop();
-  
-    // Extraire le texte après le dernier "-"
     const encodedTitle = lastPart.split('-').slice(1).join('-');
-  
-    // Décoder les caractères encodés en UTF-8
     const decodedTitle = decodeURIComponent(encodedTitle);
-  
-    return decodedTitle.replace(/-/g, ' '); // Remplacer les "-" par des espaces
+    return decodedTitle.replace(/-/g, ' ');
   }
-  
 
   const handleContextMenu = (event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -560,18 +559,17 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-8" onContextMenu={handleContextMenu}>
-      <div id="context-menu" className="hidden fixed bg-white shadow-md rounded-lg z-50">
-        <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100">Paste</button>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-8" onContextMenu={handleContextMenu}>
+      <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
+        <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Paste</button>
       </div>
       <div className="max-w-12xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
           <div className="flex items-center gap-3 mb-4 sm:mb-0">
-            <Timer className="w-8 h-8 text-indigo-600" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Multi Timer</h1>
-            {timers.length > 1 && <h1 className="text-2xl sm:text-3xl text-gray-800">{getTotalTime()}</h1>}
+            <Timer className="w-8 h-8 text-indigo-600 dark:text-indigo-500" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Multi Timer</h1>
+            {timers.length > 1 && <h1 className="text-2xl sm:text-3xl text-gray-800 dark:text-white">{getTotalTime()}</h1>}
           </div>
-          {/* On multiple rows on mobile */}
           <div className="flex items-center gap-4">
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={deleteAllTimers} />
@@ -596,8 +594,9 @@ function App() {
               )
             ) : null}
             <button
+              // Don't pass any params
               onClick={addTimer}
-              className="flex items-center gap-2 bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
             >
               <Plus className="w-6 h-6" />
               <span className="hidden sm:inline">Add Timer</span>
@@ -605,8 +604,8 @@ function App() {
             <button
               onClick={() => setIsSimpleMode(prev => !prev)}
               className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${!isSimpleMode
-                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               title={isSimpleMode ? "Switch to multi mode" : "Switch to simple mode"}
             >
@@ -615,8 +614,8 @@ function App() {
             <button
               onClick={() => setShowDecimalTime((prev: boolean) => !prev)}
               className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showDecimalTime
-                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               title="Toggle decimal time format"
             >
@@ -625,14 +624,24 @@ function App() {
             <button
               onClick={() => setShowMilliseconds((prev: boolean) => !prev)}
               className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showMilliseconds
-                ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               title="Toggle milliseconds display"
             >
               <Clock className="w-6 h-6 hidden sm:inline" />
               <span>ms</span>
             </button>
+            {/* <button
+              onClick={() => setIsDarkMode(prev => !prev)}
+              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isDarkMode
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              title="Toggle dark mode"
+            >
+              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+            </button> */}
           </div>
         </div>
 
@@ -669,7 +678,7 @@ function App() {
         </DndContext>
 
         {timers.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             No timers yet. Click "Add Timer" to create one!
           </div>
         )}

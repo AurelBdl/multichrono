@@ -9,4 +9,8 @@
         -webkit-appearance: none;
         margin: 0;
     }
+
+    body {
+        @apply transition-colors duration-200;
+    }
 }

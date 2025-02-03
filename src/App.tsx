@@ -26,6 +26,7 @@ interface Timer {
   time: number;
   isRunning: boolean;
   startTime: number | null;
+  creationDate?: Date;
   hasBeenRendered?: boolean;
 }
 
@@ -270,6 +271,10 @@ function App() {
     const saved = localStorage.getItem('isDarkMode');
     return saved ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+  const [showByDate, setShowByDate] = useState(() => {
+    const saved = localStorage.getItem('showByDate');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   useEffect(() => {
     if (isDarkMode) {
@@ -278,6 +283,10 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('showByDate', JSON.stringify(showByDate));
+  }, [showByDate]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -353,6 +362,7 @@ function App() {
       time: 0,
       isRunning: false,
       startTime: null,
+      creationDate: new Date(),
       hasBeenRendered: false
     };
     setTimers(prev => {
@@ -653,6 +663,29 @@ function App() {
     }
   };
 
+  const groupTimersByDate = (timers: Timer[]) => {
+    const grouped = timers.reduce((groups, timer) => {
+      const date = new Date(timer.creationDate ? timer.creationDate : new Date()).toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(timer);
+      return groups;
+    }, {} as Record<string, Timer[]>);
+  
+    return Object.keys(grouped)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+      .reduce((sortedGroups, date) => {
+        sortedGroups[date] = grouped[date];
+        return sortedGroups;
+      }, {} as Record<string, Timer[]>);
+  };
+
+  const getTotalTimeForDate = (timers: Timer[]) => {
+    const totalms = timers.reduce((acc, timer) => acc + timer.time, 0);
+    return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
       <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
@@ -665,6 +698,7 @@ function App() {
         isDarkMode={isDarkMode}
         showDecimalTime={showDecimalTime}
         showMilliseconds={showMilliseconds}
+        showByDate={showByDate} // New property
         onDeleteAll={deleteAllTimers}
         onToggleAll={toggleAllTimers}
         onAddTimer={() => addTimer({ name: 'Timer ' + (timers.length + 1) })}
@@ -675,6 +709,7 @@ function App() {
         onDownloadJSON={downloadJSON}
         getTotalTime={getTotalTime}
         onImportJSON={handleFileUpload}
+        onToggleByDate={() => setShowByDate(prev => !prev)} // New method
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 ">
@@ -683,31 +718,69 @@ function App() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <SortableContext
-              items={timers}
-              strategy={rectSortingStrategy}
-            >
-              {timers.map((timer) => (
-                <div key={timer.id} id={`timer-${timer.id}`} className="timer-container">
-                  <SortableTimer
-                    onRender={() => setTimerIsRendered(timer.id)}
-                    timer={timer}
-                    onToggle={toggleTimer}
-                    onReset={resetTimer}
-                    onDelete={deleteTimer}
-                    onNameChange={updateTimerName}
-                    onHourChange={updateTimerHour}
-                    onMinuteChange={updateTimerMinute}
-                    onSecondChange={updateTimerSecond}
-                    formatTime={formatTime}
-                    showMilliseconds={showMilliseconds}
-                    showDecimalTime={showDecimalTime}
-                  />
+          {showByDate ? (
+            Object.entries(groupTimersByDate(timers)).map(([date, timers]) => (
+              <div key={date} className="mb-10">
+                <div className="flex space-x-4 text-gray-800 dark:text-white mb-4">
+                  <h2 className="font-bold text-xl">
+                    {date}
+                  </h2>
+                  <h2 className="text-lg">{getTotalTimeForDate(timers)}</h2>
                 </div>
-              ))}
-            </SortableContext>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <SortableContext
+                    items={timers}
+                    strategy={rectSortingStrategy}
+                  >
+                    {timers.map((timer) => (
+                      <div key={timer.id} id={`timer-${timer.id}`} className="timer-container">
+                        <SortableTimer
+                          onRender={() => setTimerIsRendered(timer.id)}
+                          timer={timer}
+                          onToggle={toggleTimer}
+                          onReset={resetTimer}
+                          onDelete={deleteTimer}
+                          onNameChange={updateTimerName}
+                          onHourChange={updateTimerHour}
+                          onMinuteChange={updateTimerMinute}
+                          onSecondChange={updateTimerSecond}
+                          formatTime={formatTime}
+                          showMilliseconds={showMilliseconds}
+                          showDecimalTime={showDecimalTime}
+                        />
+                      </div>
+                    ))}
+                  </SortableContext>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <SortableContext
+                items={timers}
+                strategy={rectSortingStrategy}
+              >
+                {timers.map((timer) => (
+                  <div key={timer.id} id={`timer-${timer.id}`} className="timer-container">
+                    <SortableTimer
+                      onRender={() => setTimerIsRendered(timer.id)}
+                      timer={timer}
+                      onToggle={toggleTimer}
+                      onReset={resetTimer}
+                      onDelete={deleteTimer}
+                      onNameChange={updateTimerName}
+                      onHourChange={updateTimerHour}
+                      onMinuteChange={updateTimerMinute}
+                      onSecondChange={updateTimerSecond}
+                      formatTime={formatTime}
+                      showMilliseconds={showMilliseconds}
+                      showDecimalTime={showDecimalTime}
+                    />
+                  </div>
+                ))}
+              </SortableContext>
+            </div>
+          )}
         </DndContext>
 
         {timers.length === 0 && (

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload } from 'lucide-react';
+import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 import { CSSTransition } from 'react-transition-group';
 
@@ -9,6 +9,7 @@ interface HeaderProps {
   isDarkMode: boolean;
   showDecimalTime: boolean;
   showMilliseconds: boolean;
+  showByDate: boolean; // New property
 
   onDeleteAll: () => void;
   onToggleAll: () => void;
@@ -20,6 +21,7 @@ interface HeaderProps {
   onDownloadJSON: () => void;
   getTotalTime: () => string;
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleByDate: () => void; // New method
 }
 
 function SettingsDropdown({
@@ -30,12 +32,14 @@ function SettingsDropdown({
   isDarkMode,
   showDecimalTime,
   showMilliseconds,
+  showByDate, // New property
   onToggleSimpleMode,
   onToggleDecimalTime,
   onToggleMilliseconds,
   onToggleDarkMode,
   onDownloadJSON,
   onImportJSON,
+  onToggleByDate, // New method
 }: {
   timers: any[];
   isOpen: boolean;
@@ -44,12 +48,14 @@ function SettingsDropdown({
   isDarkMode: boolean;
   showDecimalTime: boolean;
   showMilliseconds: boolean;
+  showByDate: boolean; // New property
   onToggleSimpleMode: () => void;
   onToggleDecimalTime: () => void;
   onToggleMilliseconds: () => void;
   onToggleDarkMode: () => void;
   onDownloadJSON: () => void;
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleByDate: () => void; // New method
 }) {
   return (
     <CSSTransition
@@ -59,6 +65,34 @@ function SettingsDropdown({
       unmountOnExit
     >
       <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
+        <button
+          onClick={() => onToggleDecimalTime()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <Hourglass className="w-4 h-4" />
+          {showDecimalTime ? 'Hide' : 'Show'} decimal time
+        </button>
+        <button
+          onClick={() => onToggleByDate()} // New button
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <CalendarClock className="w-4 h-4" />
+          {showByDate ? 'Ungroup' : 'Group'} by date
+        </button>
+        <button
+          onClick={() => onToggleSimpleMode()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {isSimpleMode ? 'Enable' : 'Disable'} multi mode
+        </button>
+        <button
+          onClick={() => onToggleMilliseconds()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <Clock className="w-4 h-4" />
+          {showMilliseconds ? 'Hide' : 'Show'} milliseconds
+        </button>
         {timers.length > 0 && 
           <button
             onClick={() => onDownloadJSON()}
@@ -73,27 +107,6 @@ function SettingsDropdown({
           Import JSON
           <input type="file" accept=".json" onChange={(args) => {onImportJSON(args); onClose()}} className="hidden" />
         </label>
-        <button
-          onClick={() => onToggleMilliseconds()}
-          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        >
-          <Clock className="w-4 h-4" />
-          {showMilliseconds ? 'Hide' : 'Show'} milliseconds
-        </button>
-        <button
-          onClick={() => onToggleDecimalTime()}
-          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        >
-          <Hourglass className="w-4 h-4" />
-          {showDecimalTime ? 'Hide' : 'Show'} decimal time
-        </button>
-        <button
-          onClick={() => onToggleSimpleMode()}
-          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        >
-          {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {isSimpleMode ? 'Enable' : 'Disable'} multi mode
-        </button>
         <button
           onClick={() => onToggleDarkMode()}
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -112,6 +125,7 @@ export default function Header({
   isDarkMode,
   showDecimalTime,
   showMilliseconds,
+  showByDate, // New property
   onDeleteAll,
   onToggleAll,
   onAddTimer,
@@ -121,7 +135,8 @@ export default function Header({
   onToggleDarkMode,
   onDownloadJSON,
   getTotalTime,
-  onImportJSON
+  onImportJSON,
+  onToggleByDate // New method
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const mobileSettingsRef = useRef<HTMLDivElement>(null);
@@ -172,12 +187,14 @@ export default function Header({
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
+                showByDate={showByDate} // New property
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleDecimalTime={onToggleDecimalTime}
                 onToggleMilliseconds={onToggleMilliseconds}
                 onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
                 onImportJSON={onImportJSON}
+                onToggleByDate={onToggleByDate} // New method
               />
             </div>
           </div>
@@ -233,12 +250,14 @@ export default function Header({
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
+                showByDate={showByDate} // New property
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleDecimalTime={onToggleDecimalTime}
                 onToggleMilliseconds={onToggleMilliseconds}
                 onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
                 onImportJSON={onImportJSON}
+                onToggleByDate={onToggleByDate} // New method
               />
             </div>
           </div>

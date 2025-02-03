@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass, Sun, Moon } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass, Download } from 'lucide-react';
+import useTrelloDrag from './hooks/useTrelloCard';
 import {
   DndContext,
   closestCenter,
@@ -556,8 +557,57 @@ function App() {
     };
   }, []);
 
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault(); // Nécessaire pour autoriser le drop
+  };
+  const hoveredCard = useTrelloDrag();
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    console.log("===>", hoveredCard)
+    if (!hoveredCard) return;
+    
+    // Cherche le lien Trello dans la carte détectée
+    // const link = hoveredCard.querySelector("a[href*='/c/']");
+    // if (link) {
+    //   console.log("🔗 Carte Trello détectée :", link.href);
+    // } else {
+    //   console.log("❌ Impossible de récupérer l'URL de la carte.");
+    // }
+  };
+
+  const convertToDecimalTime = ({ hour, minutes }: { hour: number, minutes: number }) => {
+    if (typeof hour !== 'number' || typeof minutes !== 'number') {
+      throw new Error('Les propriétés hour et minutes doivent être des nombres.');
+    }
+
+    let decimalTime = hour + minutes / 60;
+    decimalTime = Math.round(decimalTime * 20) / 20;
+
+    return decimalTime;
+  }
+
+  const downloadJSON = () => {
+    const timersWithDecimalTime = timers.map(timer => ({
+      ...timer,
+      decimalTime: convertToDecimalTime({
+        hour: formatTime(timer.time).hours,
+        minutes: formatTime(timer.time).minutes % 60
+      })
+    }));
+
+    const jsonContent = JSON.stringify(timersWithDecimalTime, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'timers.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-8" onContextMenu={handleContextMenu}>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-8" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
       <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
         <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Paste</button>
       </div>
@@ -629,6 +679,12 @@ function App() {
             >
               <Clock className="w-6 h-6 hidden sm:inline" />
               <span>ms</span>
+            </button>
+            <button
+              onClick={downloadJSON}
+              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+            >
+              <Download className="w-6 h-6" />
             </button>
             {/* <button
               onClick={() => setIsDarkMode(prev => !prev)}

@@ -723,7 +723,7 @@ function App() {
               <div key={date} className="mb-10">
                 <div className="flex space-x-4 text-gray-800 dark:text-white mb-4">
                   <h2 className="font-bold text-xl">
-                    {date}
+                    {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </h2>
                   <h2 className="text-lg">{getTotalTimeForDate(timers)}</h2>
                 </div>

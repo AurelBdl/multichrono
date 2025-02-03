@@ -607,6 +607,34 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const importJSON = (jsonContent: string) => {
+    try {
+      const importedTimers: Timer[] = JSON.parse(jsonContent).map(timer => ({
+        ...timer,
+        id: crypto.randomUUID()
+      }));
+      setTimers(prev => {
+        const newTimers = [...prev, ...importedTimers];
+        localStorage.setItem('timers', JSON.stringify(newTimers));
+        return newTimers;
+      });
+    } catch (error) {
+      console.error('Failed to import JSON:', error);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        importJSON(content);
+      };
+      reader.readAsText(file);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
       <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
@@ -628,6 +656,7 @@ function App() {
         onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
         onDownloadJSON={downloadJSON}
         getTotalTime={getTotalTime}
+        onImportJSON={handleFileUpload}
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 ">

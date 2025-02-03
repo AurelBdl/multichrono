@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun } from 'lucide-react';
+import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 
 interface HeaderProps {
@@ -18,11 +18,13 @@ interface HeaderProps {
   onToggleDarkMode: () => void;
   onDownloadJSON: () => void;
   getTotalTime: () => string;
+  onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 function SettingsDropdown({
   timers,
   isOpen,
+  onClose,
   isSimpleMode,
   isDarkMode,
   showDecimalTime,
@@ -32,9 +34,11 @@ function SettingsDropdown({
   onToggleMilliseconds,
   onToggleDarkMode,
   onDownloadJSON,
+  onImportJSON,
 }: {
   timers: any[];
   isOpen: boolean;
+  onClose: () => void;
   isSimpleMode: boolean;
   isDarkMode: boolean;
   showDecimalTime: boolean;
@@ -44,6 +48,7 @@ function SettingsDropdown({
   onToggleMilliseconds: () => void;
   onToggleDarkMode: () => void;
   onDownloadJSON: () => void;
+  onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   if (!isOpen) return null;
 
@@ -55,9 +60,14 @@ function SettingsDropdown({
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
         >
           <Download className="w-4 h-4" />
-          Download as JSON
+          Export as JSON
         </button>
       }
+      <label className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
+        <Upload className="w-4 h-4" />
+        Import JSON
+        <input type="file" accept=".json" onChange={(args) => {onImportJSON(args); onClose()}} className="hidden" />
+      </label>
       <button
         onClick={() => onToggleMilliseconds()}
         className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -104,7 +114,8 @@ export default function Header({
   onToggleMilliseconds,
   onToggleDarkMode,
   onDownloadJSON,
-  getTotalTime
+  getTotalTime,
+  onImportJSON
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const mobileSettingsRef = useRef<HTMLDivElement>(null);
@@ -150,6 +161,7 @@ export default function Header({
               <SettingsDropdown
                 timers={timers}
                 isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
@@ -159,6 +171,7 @@ export default function Header({
                 onToggleMilliseconds={onToggleMilliseconds}
                 onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
+                onImportJSON={onImportJSON}
               />
             </div>
           </div>
@@ -209,6 +222,7 @@ export default function Header({
               <SettingsDropdown
                 timers={timers}
                 isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
@@ -218,6 +232,7 @@ export default function Header({
                 onToggleMilliseconds={onToggleMilliseconds}
                 onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
+                onImportJSON={onImportJSON}
               />
             </div>
           </div>

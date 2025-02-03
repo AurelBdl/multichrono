@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Plus, Timer, GripVertical, Clock, Copy, Square, Hourglass, Download } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Timer, GripVertical } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
 import {
   DndContext,
@@ -18,7 +18,6 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
 
 interface Timer {
@@ -267,7 +266,8 @@ function App() {
     return saved ? JSON.parse(saved) : true;
   });
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem('isDarkMode');
+    return saved ? JSON.parse(saved) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
@@ -327,6 +327,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem('showDecimalTime', JSON.stringify(showDecimalTime));
   }, [showDecimalTime]);
+
+  useEffect(() => {
+    localStorage.setItem('isSimpleMode', JSON.stringify(isSimpleMode));
+  }, [isSimpleMode]);
+
+  useEffect(() => {
+    localStorage.setItem('isDarkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
   const setTimerIsRendered = (id: string) => {
     setTimers(prev => {
@@ -608,6 +616,7 @@ function App() {
       <Header 
         timers={timers}
         isSimpleMode={isSimpleMode}
+        isDarkMode={isDarkMode}
         showDecimalTime={showDecimalTime}
         showMilliseconds={showMilliseconds}
         onDeleteAll={deleteAllTimers}
@@ -616,6 +625,7 @@ function App() {
         onToggleSimpleMode={() => setIsSimpleMode(prev => !prev)}
         onToggleDecimalTime={() => setShowDecimalTime(prev => !prev)}
         onToggleMilliseconds={() => setShowMilliseconds(prev => !prev)}
+        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
         onDownloadJSON={downloadJSON}
         getTotalTime={getTotalTime}
       />

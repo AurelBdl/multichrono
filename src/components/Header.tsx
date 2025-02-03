@@ -1,18 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download } from 'lucide-react';
+import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 
 interface HeaderProps {
   timers: any[];
   isSimpleMode: boolean;
+  isDarkMode: boolean;
   showDecimalTime: boolean;
   showMilliseconds: boolean;
+
   onDeleteAll: () => void;
   onToggleAll: () => void;
   onAddTimer: () => void;
   onToggleSimpleMode: () => void;
   onToggleDecimalTime: () => void;
   onToggleMilliseconds: () => void;
+  onToggleDarkMode: () => void;
   onDownloadJSON: () => void;
   getTotalTime: () => string;
 }
@@ -21,21 +24,25 @@ function SettingsDropdown({
   isOpen,
   onClose,
   isSimpleMode,
+  isDarkMode,
   showDecimalTime,
   showMilliseconds,
   onToggleSimpleMode,
   onToggleDecimalTime,
   onToggleMilliseconds,
+  onToggleDarkMode,
   onDownloadJSON,
 }: {
   isOpen: boolean;
   onClose: () => void;
   isSimpleMode: boolean;
+  isDarkMode: boolean;
   showDecimalTime: boolean;
   showMilliseconds: boolean;
   onToggleSimpleMode: () => void;
   onToggleDecimalTime: () => void;
   onToggleMilliseconds: () => void;
+  onToggleDarkMode: () => void;
   onDownloadJSON: () => void;
 }) {
   if (!isOpen) return null;
@@ -70,6 +77,13 @@ function SettingsDropdown({
         {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         {isSimpleMode ? 'Enable' : 'Disable'} multi mode
       </button>
+      <button
+        onClick={() => { onToggleDarkMode(); onClose(); }}
+        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+      >
+        {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        Switch to {isDarkMode ? 'light' : 'dark'} mode
+      </button>
     </div>
   );
 }
@@ -77,6 +91,7 @@ function SettingsDropdown({
 export default function Header({
   timers,
   isSimpleMode,
+  isDarkMode,
   showDecimalTime,
   showMilliseconds,
   onDeleteAll,
@@ -85,6 +100,7 @@ export default function Header({
   onToggleSimpleMode,
   onToggleDecimalTime,
   onToggleMilliseconds,
+  onToggleDarkMode,
   onDownloadJSON,
   getTotalTime
 }: HeaderProps) {
@@ -133,11 +149,13 @@ export default function Header({
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
+                isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleDecimalTime={onToggleDecimalTime}
                 onToggleMilliseconds={onToggleMilliseconds}
+                onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
               />
             </div>
@@ -190,11 +208,13 @@ export default function Header({
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
+                isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleDecimalTime={onToggleDecimalTime}
                 onToggleMilliseconds={onToggleMilliseconds}
+                onToggleDarkMode={onToggleDarkMode}
                 onDownloadJSON={onDownloadJSON}
               />
             </div>

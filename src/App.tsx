@@ -590,6 +590,7 @@ function App() {
   const downloadJSON = () => {
     const timersWithDecimalTime = timers.map(timer => ({
       ...timer,
+      isRunning: false,
       decimalTime: convertToDecimalTime({
         hour: formatTime(timer.time).hours,
         minutes: formatTime(timer.time).minutes % 60

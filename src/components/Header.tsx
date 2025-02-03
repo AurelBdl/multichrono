@@ -21,8 +21,8 @@ interface HeaderProps {
 }
 
 function SettingsDropdown({
+  timers,
   isOpen,
-  onClose,
   isSimpleMode,
   isDarkMode,
   showDecimalTime,
@@ -33,8 +33,8 @@ function SettingsDropdown({
   onToggleDarkMode,
   onDownloadJSON,
 }: {
+  timers: any[];
   isOpen: boolean;
-  onClose: () => void;
   isSimpleMode: boolean;
   isDarkMode: boolean;
   showDecimalTime: boolean;
@@ -49,36 +49,38 @@ function SettingsDropdown({
 
   return (
     <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
+    {timers.length > 0 && 
+        <button
+          onClick={() => onDownloadJSON()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Download as JSON
+        </button>
+      }
       <button
-        onClick={() => { onDownloadJSON(); onClose(); }}
-        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-      >
-        <Download className="w-4 h-4" />
-        Download as JSON
-      </button>
-      <button
-        onClick={() => { onToggleMilliseconds(); onClose(); }}
+        onClick={() => onToggleMilliseconds()}
         className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
       >
         <Clock className="w-4 h-4" />
         {showMilliseconds ? 'Hide' : 'Show'} milliseconds
       </button>
       <button
-        onClick={() => { onToggleDecimalTime(); onClose(); }}
+        onClick={() => onToggleDecimalTime()}
         className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
       >
         <Hourglass className="w-4 h-4" />
         {showDecimalTime ? 'Hide' : 'Show'} decimal time
       </button>
       <button
-        onClick={() => { onToggleSimpleMode(); onClose(); }}
+        onClick={() => onToggleSimpleMode()}
         className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
       >
         {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         {isSimpleMode ? 'Enable' : 'Disable'} multi mode
       </button>
       <button
-        onClick={() => { onToggleDarkMode(); onClose(); }}
+        onClick={() => onToggleDarkMode()}
         className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
       >
         {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -146,8 +148,8 @@ export default function Header({
                 <Settings className="w-6 h-6" />
               </button>
               <SettingsDropdown
+                timers={timers}
                 isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}
@@ -205,8 +207,8 @@ export default function Header({
                 <Settings className="w-6 h-6" />
               </button>
               <SettingsDropdown
+                timers={timers}
                 isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
                 isDarkMode={isDarkMode}
                 showDecimalTime={showDecimalTime}

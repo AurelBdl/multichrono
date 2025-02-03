@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
+import Header from './components/Header';
 
 interface Timer {
   id: string;
@@ -558,21 +559,13 @@ function App() {
   }, []);
 
   const handleDragOver = (event: React.DragEvent) => {
-    event.preventDefault(); // Nécessaire pour autoriser le drop
+    event.preventDefault();
   };
   const hoveredCard = useTrelloDrag();
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     console.log("===>", hoveredCard)
     if (!hoveredCard) return;
-    
-    // Cherche le lien Trello dans la carte détectée
-    // const link = hoveredCard.querySelector("a[href*='/c/']");
-    // if (link) {
-    //   console.log("🔗 Carte Trello détectée :", link.href);
-    // } else {
-    //   console.log("❌ Impossible de récupérer l'URL de la carte.");
-    // }
   };
 
   const convertToDecimalTime = ({ hour, minutes }: { hour: number, minutes: number }) => {
@@ -607,98 +600,27 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-8" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
       <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
         <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Paste</button>
       </div>
-      <div className="max-w-12xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
-          <div className="flex items-center gap-3 mb-4 sm:mb-0">
-            <Timer className="w-8 h-8 text-indigo-600 dark:text-indigo-500" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Multi Timer</h1>
-            {timers.length > 1 && <h1 className="text-2xl sm:text-3xl text-gray-800 dark:text-white">{getTotalTime()}</h1>}
-          </div>
-          <div className="flex items-center gap-4">
-            {timers.length > 0 && (
-              <ConfirmDeleteButton onDelete={deleteAllTimers} />
-            )}
-            {timers.length > 0 && !isSimpleMode ? (
-              timers.find(elem => elem.isRunning) ? (
-                <button
-                  onClick={toggleAllTimers}
-                  className="flex items-center gap-2 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  <Pause className="w-6 h-6" />
-                  <span className="hidden sm:inline">Pause All</span>
-                </button>
-              ) : (
-                <button
-                  onClick={toggleAllTimers}
-                  className="flex items-center gap-2 bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Play className="w-6 h-6" />
-                  <span className="hidden sm:inline">Start All</span>
-                </button>
-              )
-            ) : null}
-            <button
-              // Don't pass any params
-              onClick={addTimer}
-              className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
-            >
-              <Plus className="w-6 h-6" />
-              <span className="hidden sm:inline">Add Timer</span>
-            </button>
-            <button
-              onClick={() => setIsSimpleMode(prev => !prev)}
-              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${!isSimpleMode
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              title={isSimpleMode ? "Switch to multi mode" : "Switch to simple mode"}
-            >
-              {!isSimpleMode ? <Square className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
-            </button>
-            <button
-              onClick={() => setShowDecimalTime((prev: boolean) => !prev)}
-              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showDecimalTime
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              title="Toggle decimal time format"
-            >
-              <Hourglass className="w-6 h-6" />
-            </button>
-            <button
-              onClick={() => setShowMilliseconds((prev: boolean) => !prev)}
-              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${showMilliseconds
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              title="Toggle milliseconds display"
-            >
-              <Clock className="w-6 h-6 hidden sm:inline" />
-              <span>ms</span>
-            </button>
-            <button
-              onClick={downloadJSON}
-              className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-            >
-              <Download className="w-6 h-6" />
-            </button>
-            {/* <button
-              onClick={() => setIsDarkMode(prev => !prev)}
-              className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isDarkMode
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              title="Toggle dark mode"
-            >
-              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-            </button> */}
-          </div>
-        </div>
+      
+      <Header 
+        timers={timers}
+        isSimpleMode={isSimpleMode}
+        showDecimalTime={showDecimalTime}
+        showMilliseconds={showMilliseconds}
+        onDeleteAll={deleteAllTimers}
+        onToggleAll={toggleAllTimers}
+        onAddTimer={() => addTimer({ name: 'Timer ' + (timers.length + 1) })}
+        onToggleSimpleMode={() => setIsSimpleMode(prev => !prev)}
+        onToggleDecimalTime={() => setShowDecimalTime(prev => !prev)}
+        onToggleMilliseconds={() => setShowMilliseconds(prev => !prev)}
+        onDownloadJSON={downloadJSON}
+        getTotalTime={getTotalTime}
+      />
 
+      <div className="max-w-12xl mx-auto px-4 sm:px-8">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

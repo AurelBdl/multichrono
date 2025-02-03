@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Timer, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
+import { CSSTransition } from 'react-transition-group';
 
 interface HeaderProps {
   timers: any[];
@@ -50,53 +51,58 @@ function SettingsDropdown({
   onDownloadJSON: () => void;
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
-    {timers.length > 0 && 
+    <CSSTransition
+      in={isOpen}
+      timeout={200}
+      classNames="dropdown"
+      unmountOnExit
+    >
+      <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
+        {timers.length > 0 && 
+          <button
+            onClick={() => onDownloadJSON()}
+            className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export as JSON
+          </button>
+        }
+        <label className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
+          <Upload className="w-4 h-4" />
+          Import JSON
+          <input type="file" accept=".json" onChange={(args) => {onImportJSON(args); onClose()}} className="hidden" />
+        </label>
         <button
-          onClick={() => onDownloadJSON()}
+          onClick={() => onToggleMilliseconds()}
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
         >
-          <Download className="w-4 h-4" />
-          Export as JSON
+          <Clock className="w-4 h-4" />
+          {showMilliseconds ? 'Hide' : 'Show'} milliseconds
         </button>
-      }
-      <label className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
-        <Upload className="w-4 h-4" />
-        Import JSON
-        <input type="file" accept=".json" onChange={(args) => {onImportJSON(args); onClose()}} className="hidden" />
-      </label>
-      <button
-        onClick={() => onToggleMilliseconds()}
-        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-      >
-        <Clock className="w-4 h-4" />
-        {showMilliseconds ? 'Hide' : 'Show'} milliseconds
-      </button>
-      <button
-        onClick={() => onToggleDecimalTime()}
-        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-      >
-        <Hourglass className="w-4 h-4" />
-        {showDecimalTime ? 'Hide' : 'Show'} decimal time
-      </button>
-      <button
-        onClick={() => onToggleSimpleMode()}
-        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-      >
-        {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        {isSimpleMode ? 'Enable' : 'Disable'} multi mode
-      </button>
-      <button
-        onClick={() => onToggleDarkMode()}
-        className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-      >
-        {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        Switch to {isDarkMode ? 'light' : 'dark'} mode
-      </button>
-    </div>
+        <button
+          onClick={() => onToggleDecimalTime()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <Hourglass className="w-4 h-4" />
+          {showDecimalTime ? 'Hide' : 'Show'} decimal time
+        </button>
+        <button
+          onClick={() => onToggleSimpleMode()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          {!isSimpleMode ? <Square className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {isSimpleMode ? 'Enable' : 'Disable'} multi mode
+        </button>
+        <button
+          onClick={() => onToggleDarkMode()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          Switch to {isDarkMode ? 'light' : 'dark'} mode
+        </button>
+      </div>
+    </CSSTransition>
   );
 }
 

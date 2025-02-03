@@ -89,11 +89,15 @@ export default function Header({
   getTotalTime
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
+  const mobileSettingsRef = useRef<HTMLDivElement>(null);
+  const desktopSettingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+      if (
+        (mobileSettingsRef.current && !mobileSettingsRef.current.contains(event.target as Node)) &&
+        (desktopSettingsRef.current && !desktopSettingsRef.current.contains(event.target as Node))
+      ) {
         setIsSettingsOpen(false);
       }
     }
@@ -114,7 +118,7 @@ export default function Header({
                 <h1 className="text-2xl sm:text-3xl text-gray-800 dark:text-white">{getTotalTime()}</h1>
               }
             </div>
-            <div className="sm:hidden relative" ref={settingsRef}>
+            <div className="sm:hidden relative" ref={mobileSettingsRef}>
               <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                 className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
@@ -171,7 +175,7 @@ export default function Header({
               <Plus className="w-6 h-6" />
               <span className="hidden sm:inline">Add Timer</span>
             </button>
-            <div className="hidden sm:block relative" ref={settingsRef}>
+            <div className="hidden sm:block relative" ref={desktopSettingsRef}>
               <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                 className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${

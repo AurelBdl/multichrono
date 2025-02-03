@@ -106,6 +106,7 @@ function SortableTimer({ timer, onToggle, onReset, onDelete, onNameChange, onHou
         <input
           type="text"
           value={timer.name}
+          title={timer.name}
           onFocus={(e) => e.target.select()}
           onChange={(e) => onNameChange(timer.id, e.target.value)}
           className="flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none pb-1 dark:text-white"

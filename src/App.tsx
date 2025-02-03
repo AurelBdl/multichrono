@@ -620,7 +620,7 @@ function App() {
         getTotalTime={getTotalTime}
       />
 
-      <div className="max-w-12xl mx-auto px-4 sm:px-8">
+      <div className="max-w-12xl mx-auto p-4 sm:p-8 ">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

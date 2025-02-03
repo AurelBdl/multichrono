@@ -107,7 +107,7 @@ export default function Header({
   }, []);
 
   return (
-    <div className="sticky top-0 z-50 backdrop-blur-sm bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800 mb-8 px-4 sm:px-8 py-4">
+    <div className="sticky top-0 z-50 backdrop-blur-sm bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-4">
       <div className="max-w-12xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="w-full sm:w-auto flex items-center justify-between gap-3 mb-4 sm:mb-0">

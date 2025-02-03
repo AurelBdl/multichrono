@@ -608,12 +608,28 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const isValidTimer = (timer: any): timer is Timer => {
+    return (
+      typeof timer.id === 'string' &&
+      typeof timer.name === 'string' &&
+      typeof timer.time === 'number' &&
+      typeof timer.isRunning === 'boolean' &&
+      (typeof timer.startTime === 'number' || timer.startTime === null)
+    );
+  };
+
   const importJSON = (jsonContent: string) => {
     try {
-      const importedTimers: Timer[] = JSON.parse(jsonContent).map(timer => ({
-        ...timer,
-        id: crypto.randomUUID()
-      }));
+      const importedTimers: Timer[] = JSON.parse(jsonContent).map(timer => {
+        if (!isValidTimer(timer)) {
+          window.alert('Invalid timer structure');
+          throw new Error('Invalid timer structure');
+        }
+        return {
+          ...timer,
+          id: crypto.randomUUID()
+        };
+      });
       setTimers(prev => {
         const newTimers = [...prev, ...importedTimers];
         localStorage.setItem('timers', JSON.stringify(newTimers));

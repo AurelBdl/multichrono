@@ -198,7 +198,7 @@ export default function Header({
               />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex w-full justify-end items-center gap-4">
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={onDeleteAll} />
             )}

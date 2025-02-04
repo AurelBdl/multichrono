@@ -236,6 +236,7 @@ function App() {
           time: 0,
           isRunning: false,
           startTime: null,
+          creationDate: new Date(),
           hasBeenRendered: false
         }
       ];

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Timer, GripVertical } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, Timer, GripVertical, Plus, ArrowBigUpDash } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
 import {
   DndContext,
@@ -18,6 +18,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { FloatingButton, FloatingButtonItem } from './ui/FloatingButton';
+import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
 
 interface Timer {
@@ -689,6 +691,57 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleDragOver} onDrop={handleDrop}>
+      <FloatingButton
+      triggerContent={
+        <button className="flex items-center justify-center h-14 w-14 rounded-full bg-slate-300 dark:bg-slate-700 text-gray-600 dark:text-white/80 z-100">
+          <ArrowBigUpDash />
+        </button>
+      }>
+        {timers.length > 0 && (
+                        <FloatingButtonItem key="deleteAll">
+                          <ConfirmDeleteButton onDelete={deleteAllTimers} rounded />
+                        </FloatingButtonItem>
+                    )}
+                    {timers.length > 0 && !isSimpleMode && (
+                      <FloatingButtonItem key="toggleAll">
+                        <button
+                          onClick={toggleAllTimers}
+                          className={`flex items-center ${
+                            timers.find(elem => elem.isRunning)
+                              ? 'bg-red-600 hover:bg-red-700'
+                              : 'bg-green-600 hover:bg-green-700'
+                          } text-white p-2 h-14 w-14 rounded-full justify-center items-center transition-colors`}
+                        >
+                          {timers.find(elem => elem.isRunning) ? (
+                            <>
+                              <Pause className="w-6 h-6" />
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-6 h-6 ml-1" />
+                            </>
+                          )}
+                        </button>
+                      </FloatingButtonItem>
+                    )}
+                    <FloatingButtonItem key="addTimer">
+                      <button
+                        onClick={addTimer}
+                        className="flex items-center justify-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white p-2 h-14 w-14 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+                      >
+                        <Plus className="w-6 h-6" />
+                      </button>
+                    </FloatingButtonItem>
+      {/* {items.map((item, index) => (
+        <FloatingButtonItem key={'bla'+index}>
+          <button
+            className={
+              'h-12 w-12 rounded-full flex items-center justify-center text-white/80'}>
+            {item.icon}
+          </button>
+        </FloatingButtonItem>
+      ))} */}
+    </FloatingButton>
       <div id="context-menu" className="hidden fixed bg-white dark:bg-gray-800 shadow-md rounded-lg z-50">
         <button onClick={handlePaste} className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Paste</button>
       </div>

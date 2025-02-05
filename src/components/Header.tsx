@@ -95,7 +95,7 @@ function SettingsDropdown({
         </button>
         {timers.length > 0 && 
           <button
-            onClick={() => onDownloadJSON()}
+            onClick={() => {onDownloadJSON(); onClose()}}
             className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
@@ -108,7 +108,7 @@ function SettingsDropdown({
           <input type="file" accept=".json" onChange={(args) => {onImportJSON(args); onClose()}} className="hidden" />
         </label>
         <button
-          onClick={() => onToggleDarkMode()}
+          onClick={() => {onToggleDarkMode(); onClose()}}
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
         >
           {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -160,7 +160,7 @@ export default function Header({
     <div className="sticky top-0 z-50 backdrop-blur-sm bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-4">
       <div className="max-w-12xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between">
-          <div className="w-full sm:w-auto flex items-center justify-between gap-3 mb-4 sm:mb-0">
+          <div className="w-full sm:w-auto flex items-center justify-between gap-3 sm:mb-4 sm:mb-0">
             <div className="flex items-center gap-3">
               <Timer className="w-8 h-8 text-indigo-600 dark:text-indigo-500" />
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Multi Timer</h1>
@@ -198,7 +198,7 @@ export default function Header({
               />
             </div>
           </div>
-          <div className="flex w-full justify-end items-center gap-4">
+          <div className="w-full sm:w-auto justify-end items-center gap-4 hidden sm:flex">
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={onDeleteAll} />
             )}

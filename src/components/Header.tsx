@@ -143,6 +143,10 @@ function SettingsDropdown({
           {!isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           Switch to {isDarkMode ? 'light' : 'dark'} mode
         </button>
+        <div className="w-full px-4 py-2
+        ">
+          <a href="https://www.buymeacoffee.com/ablondel"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a beer&emoji=🍺&slug=ablondel&button_colour=5F7FFF&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00" /></a>
+        </div>
       </div>
     </CSSTransition>
   );

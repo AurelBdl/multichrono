@@ -4,32 +4,45 @@
 
 @layer base {
 
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 
-    body {
-        @apply transition-colors duration-200;
-    }
+  body {
+    @apply transition-colors duration-200;
+  }
 }
 
 .dropdown-enter {
   opacity: 0;
   transform: translateY(-10px);
 }
+
 .dropdown-enter-active {
   opacity: 1;
   transform: translateY(0);
   transition: opacity 200ms, transform 200ms;
 }
+
 .dropdown-exit {
   opacity: 1;
   transform: translateY(0);
 }
+
 .dropdown-exit-active {
   opacity: 0;
   transform: translateY(-10px);
   transition: opacity 200ms, transform 200ms;
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
 }

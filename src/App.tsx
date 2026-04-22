@@ -83,6 +83,27 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
     });
   };
 
+  const parseInputValue = (value: string, fallbackValue: string) => {
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isNaN(parsedValue)) {
+      return parsedValue;
+    }
+    const parsedFallback = Number.parseInt(fallbackValue, 10);
+    return Number.isNaN(parsedFallback) ? 0 : parsedFallback;
+  };
+
+  const commitHourInput = (input: HTMLInputElement) => {
+    onHourChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
+  };
+
+  const commitMinuteInput = (input: HTMLInputElement) => {
+    onMinuteChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
+  };
+
+  const commitSecondInput = (input: HTMLInputElement) => {
+    onSecondChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -185,6 +206,7 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
             onKeyDown={(e) => {
               if (e.key === 'Tab') {
                 e.preventDefault();
+                commitHourInput(e.currentTarget);
                 if (e.shiftKey) {
                   setIsHourEditing(false);
                   setIsMinuteEditing(false);
@@ -198,7 +220,7 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
                 focusTimeInput('minute');
               }
             }}
-            onBlur={(e) => { onHourChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsHourEditing(false) }}
+            onBlur={(e) => { commitHourInput(e.currentTarget); setIsHourEditing(false) }}
             className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
@@ -217,6 +239,7 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
             onKeyDown={(e) => {
               if (e.key === 'Tab') {
                 e.preventDefault();
+                commitMinuteInput(e.currentTarget);
                 if (e.shiftKey) {
                   setIsHourEditing(true);
                   setIsMinuteEditing(false);
@@ -230,7 +253,7 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
                 focusTimeInput('second');
               }
             }}
-            onBlur={(e) => { onMinuteChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsMinuteEditing(false) }}
+            onBlur={(e) => { commitMinuteInput(e.currentTarget); setIsMinuteEditing(false) }}
             className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
@@ -249,13 +272,14 @@ function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, o
             onKeyDown={(e) => {
               if (e.key === 'Tab' && e.shiftKey) {
                 e.preventDefault();
+                commitSecondInput(e.currentTarget);
                 setIsHourEditing(false);
                 setIsMinuteEditing(true);
                 setIsSecondEditing(false);
                 focusTimeInput('minute');
               }
             }}
-            onBlur={(e) => { onSecondChange(timer.id, e.target.value ? parseInt(e.target.value) : 0, parseInt(e.target.defaultValue)); setIsSecondEditing(false) }}
+            onBlur={(e) => { commitSecondInput(e.currentTarget); setIsSecondEditing(false) }}
             className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
           />
         )}
@@ -1219,7 +1243,7 @@ function App() {
                           className="peer sr-only"
                           aria-label={`Cocher tous les timers du ${date}`}
                         />
-                        <span className="flex h-5 w-5 items-center justify-center rounded-[0.45rem] border-2 border-gray-300 bg-white text-transparent shadow-sm transition-all duration-200 ease-out peer-hover:scale-105 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:border-indigo-500 dark:peer-checked:bg-indigo-500 dark:peer-focus-visible:ring-indigo-500 dark:peer-focus-visible:ring-offset-gray-800">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-md border-2 border-gray-300 bg-white text-transparent shadow-sm transition-all duration-200 ease-out peer-hover:scale-105 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:border-indigo-500 dark:peer-checked:bg-indigo-500 dark:peer-focus-visible:ring-indigo-500 dark:peer-focus-visible:ring-offset-gray-800">
                           <Check className="h-3.5 w-3.5" strokeWidth={3} />
                         </span>
                       </label>

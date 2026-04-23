@@ -591,6 +591,7 @@ function SortableTimer({
           <div className="relative flex items-center justify-between h-full px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75 pointer-events-none">
             {goalReached ? (
               <>
+                {/* Left: goal reached message */}
                 <span className="text-xs font-semibold text-white drop-shadow-sm">
                   {(() => {
                     const totalSec = Math.floor(timer.goalTime / 1000);
@@ -598,27 +599,45 @@ function SortableTimer({
                     const m = Math.floor((totalSec % 3600) / 60);
                     const s = totalSec % 60;
                     const label = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : m > 0 && s > 0 ? `${m}min${s}s` : m > 0 ? `${m}min` : `${s}s`;
-                    return `🎯 Goal reached : ${label}`;
+                    return `🎯 The goal of ${label} has been reached!`;
                   })()}
                 </span>
+                {/* Right: percentage */}
                 <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
               </>
             ) : (
               <>
+                {/* Left: goal */}
                 <span className="text-xs font-semibold text-white drop-shadow-sm">
                   {(() => {
                     const totalSec = Math.floor(timer.goalTime / 1000);
                     const h = Math.floor(totalSec / 3600);
                     const m = Math.floor((totalSec % 3600) / 60);
                     const s = totalSec % 60;
-                    if (h > 0 && m > 0) return `${h}h${m}min`;
-                    if (h > 0) return `${h}h`;
-                    if (m > 0 && s > 0) return `${m}min${s}s`;
-                    if (m > 0) return `${m}min`;
+                    if (h > 0 && m > 0) return `Goal : ${h}h${m}min`;
+                    if (h > 0) return `Goal : ${h}h`;
+                    if (m > 0 && s > 0) return `Goal : ${m}min${s}s`;
+                    if (m > 0) return `Goal : ${m}min`;
                     return `Goal : ${s}s`;
                   })()}
                 </span>
+                {/* Center: percentage */}
                 <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
+                {/* Right: remaining */}
+                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                  {(() => {
+                    const diffMs = timer.goalTime - effectiveTime;
+                    const totalSec = Math.floor(diffMs / 1000);
+                    const h = Math.floor(totalSec / 3600);
+                    const m = Math.floor((totalSec % 3600) / 60);
+                    const s = totalSec % 60;
+                    if (h > 0 && m > 0) return `-${h}h${m}min`;
+                    if (h > 0) return `-${h}h`;
+                    if (m > 0 && s > 0) return `-${m}min${s}s`;
+                    if (m > 0) return `-${m}min`;
+                    return `-${s}s`;
+                  })()}
+                </span>
               </>
             )}
           </div>

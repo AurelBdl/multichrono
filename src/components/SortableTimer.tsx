@@ -308,7 +308,8 @@ function SortableTimer({
     setShowGoalModal(true);
   };
 
-  const goalProgress = timer.goalTime ? Math.min(100, (effectiveTime / timer.goalTime) * 100) : 0;
+  const goalProgressRaw = timer.goalTime ? (effectiveTime / timer.goalTime) * 100 : 0;
+  const goalProgress = Math.min(100, goalProgressRaw);
   const goalReached = timer.goalTime ? effectiveTime >= timer.goalTime : false;
 
   const convertToDecimalTime = ({ hour, minutes }: { hour: number; minutes: number }) => {
@@ -326,263 +327,301 @@ function SortableTimer({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative bg-white dark:bg-gray-800 items-center rounded-lg shadow-md p-4 sm:p-6 ${timer.isChecked ? 'ring-2 ring-green-300 dark:ring-green-700 bg-green-50/50 dark:bg-green-900/20' : ''} ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
+      className={`relative overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col ${timer.isChecked ? 'ring-2 ring-green-300 dark:ring-green-700 bg-green-50/50 dark:bg-green-900/20' : ''} ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center gap-1 mb-10">
-        {isCheckingMode && (
-          <div className={`shrink-0 overflow-hidden transition-all duration-200 ease-out ${isHovered || timer.isChecked ? 'w-5 opacity-100' : 'w-0 opacity-0 -ml-2'}`}>
-            <label className="flex items-center cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={timer.isChecked}
-                onChange={() => onToggleChecking(timer.id)}
-                className="peer sr-only"
-                aria-label={`Cocher le timer ${timer.name}`}
-                title='Check timer'
-              />
-              <span className="flex h-5 w-5 items-center justify-center rounded-md border-2 border-gray-300 bg-white text-transparent shadow-sm transition-all duration-200 ease-out peer-hover:scale-105 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:border-indigo-500 dark:peer-checked:bg-indigo-500 dark:peer-focus-visible:ring-indigo-500 dark:peer-focus-visible:ring-offset-gray-800">
-                <Check className="h-3.5 w-3.5" strokeWidth={3} />
-              </span>
-            </label>
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center gap-1 mb-10">
+          {isCheckingMode && (
+            <div className={`shrink-0 overflow-hidden transition-all duration-200 ease-out ${isHovered || timer.isChecked ? 'w-7 opacity-100' : 'w-0 opacity-0 -ml-2'}`}>
+              <label className="flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={timer.isChecked}
+                  onChange={() => onToggleChecking(timer.id)}
+                  className="peer sr-only"
+                  aria-label={`Cocher le timer ${timer.name}`}
+                  title='Check timer'
+                />
+                <span className="flex h-5 w-5 items-center justify-center rounded-md border-2 border-gray-300 bg-white text-transparent shadow-sm transition-all duration-200 ease-out peer-hover:scale-105 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:border-indigo-500 dark:peer-checked:bg-indigo-500 dark:peer-focus-visible:ring-indigo-500 dark:peer-focus-visible:ring-offset-gray-800">
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                </span>
+              </label>
+            </div>
+          )}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1"
+            title="Drag timer"
+          >
+            <GripVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
           </div>
-        )}
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1"
-          title="Drag timer"
-        >
-          <GripVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-        </div>
-        <input
-          id={`name-${timer.id}`}
-          type="text"
-          value={timer.name}
-          title={timer.name}
-          autoFocus={shouldAutoFocusName}
-          onFocus={(e) => {
-            e.target.select();
-            if (shouldAutoFocusName) {
-              onNameFocusHandled?.();
-            }
-          }}
-          onChange={(e) => onNameChange(timer.id, e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Tab') {
-              e.preventDefault();
-              if (e.shiftKey) {
-                setIsHourEditing(false);
-                setIsMinuteEditing(false);
-                setIsSecondEditing(true);
-                focusTimeInput('second');
-                return;
-              }
-              setIsHourEditing(true);
-              setIsMinuteEditing(false);
-              setIsSecondEditing(false);
-              focusTimeInput('hour');
-            }
-          }}
-          className={`flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none pb-1 dark:text-white ${timer.isChecked ? 'line-through opacity-70' : ''}`}
-        />
-      </div>
-      <div className={`text-4xl font-mono text-center flex justify-center ${!showDecimalTime ? 'mb-10' : ''} dark:text-white`}>
-        <div onClick={() => { setIsHourEditing(true); setTimeout(() => document.getElementById('hour-' + timer.id)?.focus()) }} className={`${isHourEditing ? 'hidden' : 'block'}`}>
-          {formatTime(effectiveTime).hours.toString().padStart(2, '0')}
-        </div>
-        {isHourEditing && (
           <input
-            id={`hour-${timer.id}`}
-            type="number"
-            max={99}
-            min={0}
-            defaultValue={formatTime(effectiveTime).hours.toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
+            id={`name-${timer.id}`}
+            type="text"
+            value={timer.name}
+            title={timer.name}
+            autoFocus={shouldAutoFocusName}
+            onFocus={(e) => {
+              e.target.select();
+              if (shouldAutoFocusName) {
+                onNameFocusHandled?.();
+              }
+            }}
+            onChange={(e) => onNameChange(timer.id, e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Tab') {
                 e.preventDefault();
-                commitHourInput(e.currentTarget);
                 if (e.shiftKey) {
                   setIsHourEditing(false);
                   setIsMinuteEditing(false);
-                  setIsSecondEditing(false);
-                  document.getElementById(`name-${timer.id}`)?.focus();
+                  setIsSecondEditing(true);
+                  focusTimeInput('second');
                   return;
                 }
-                setIsHourEditing(false);
-                setIsMinuteEditing(true);
+                setIsHourEditing(true);
+                setIsMinuteEditing(false);
                 setIsSecondEditing(false);
-                focusTimeInput('minute');
+                focusTimeInput('hour');
               }
             }}
-            onBlur={(e) => { commitHourInput(e.currentTarget); setIsHourEditing(false); }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
+            className={`flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none pb-1 dark:text-white ${timer.isChecked ? 'line-through opacity-70' : ''}`}
           />
-        )}
-        :
-        <div onClick={() => { setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-' + timer.id)?.focus()) }} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
-          {(formatTime(effectiveTime).minutes % 60).toString().padStart(2, '0')}
         </div>
-        {isMinuteEditing && (
-          <input
-            type="number"
-            id={`minute-${timer.id}`}
-            max={59}
-            min={0}
-            defaultValue={(formatTime(effectiveTime).minutes % 60).toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
+        <div className="flex flex-col h-20">
+          <div className={`text-4xl font-mono text-center flex justify-center dark:text-white`}>
+            <div onClick={() => { setIsHourEditing(true); setTimeout(() => document.getElementById('hour-' + timer.id)?.focus()) }} className={`${isHourEditing ? 'hidden' : 'block'}`}>
+              {formatTime(effectiveTime).hours.toString().padStart(2, '0')}
+            </div>
+            {isHourEditing && (
+              <input
+                id={`hour-${timer.id}`}
+                type="number"
+                max={99}
+                min={0}
+                defaultValue={formatTime(effectiveTime).hours.toString().padStart(2, '0')}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    commitHourInput(e.currentTarget);
+                    if (e.shiftKey) {
+                      setIsHourEditing(false);
+                      setIsMinuteEditing(false);
+                      setIsSecondEditing(false);
+                      document.getElementById(`name-${timer.id}`)?.focus();
+                      return;
+                    }
+                    setIsHourEditing(false);
+                    setIsMinuteEditing(true);
+                    setIsSecondEditing(false);
+                    focusTimeInput('minute');
+                  }
+                }}
+                onBlur={(e) => { commitHourInput(e.currentTarget); setIsHourEditing(false); }}
+                className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
+              />
+            )}
+            :
+            <div onClick={() => { setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-' + timer.id)?.focus()) }} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
+              {(formatTime(effectiveTime).minutes % 60).toString().padStart(2, '0')}
+            </div>
+            {isMinuteEditing && (
+              <input
+                type="number"
+                id={`minute-${timer.id}`}
+                max={59}
+                min={0}
+                defaultValue={(formatTime(effectiveTime).minutes % 60).toString().padStart(2, '0')}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    commitMinuteInput(e.currentTarget);
+                    if (e.shiftKey) {
+                      setIsHourEditing(true);
+                      setIsMinuteEditing(false);
+                      setIsSecondEditing(false);
+                      focusTimeInput('hour');
+                      return;
+                    }
+                    setIsHourEditing(false);
+                    setIsMinuteEditing(false);
+                    setIsSecondEditing(true);
+                    focusTimeInput('second');
+                  }
+                }}
+                onBlur={(e) => { commitMinuteInput(e.currentTarget); setIsMinuteEditing(false); }}
+                className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
+              />
+            )}
+            :
+            <div onClick={() => { setIsSecondEditing(true); setTimeout(() => document.getElementById('second-' + timer.id)?.focus()) }} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
+              {(formatTime(effectiveTime).seconds % 60).toString().padStart(2, '0')}
+            </div>
+            {isSecondEditing && (
+              <input
+                type="number"
+                id={`second-${timer.id}`}
+                max={59}
+                min={0}
+                defaultValue={(formatTime(effectiveTime).seconds % 60).toString().padStart(2, '0')}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' && e.shiftKey) {
+                    e.preventDefault();
+                    commitSecondInput(e.currentTarget);
+                    setIsHourEditing(false);
+                    setIsMinuteEditing(true);
+                    setIsSecondEditing(false);
+                    focusTimeInput('minute');
+                  }
+                }}
+                onBlur={(e) => { commitSecondInput(e.currentTarget); setIsSecondEditing(false); }}
+                className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
+              />
+            )}
+            {showMilliseconds && (
+              <>
+                :
+                <div>
+                  {formatTime(effectiveTime).milliseconds.toString().padStart(3, '0')}
+                </div>
+              </>
+            )}
+          </div>
+          {showDecimalTime && (
+            <div className="top-0 right-0 text-xl font-mono text-center flex justify-center dark:text-white">
+              <div>
+                {convertToDecimalTime({ hour: formatTime(effectiveTime).hours, minutes: formatTime(effectiveTime).minutes % 60 }) + 'h'}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-between">
+          <button
+            onClick={() => onToggle(timer.id)}
             onKeyDown={(e) => {
-              if (e.key === 'Tab') {
+              if (e.key === 'Tab' && e.shiftKey) {
                 e.preventDefault();
-                commitMinuteInput(e.currentTarget);
-                if (e.shiftKey) {
-                  setIsHourEditing(true);
-                  setIsMinuteEditing(false);
-                  setIsSecondEditing(false);
-                  focusTimeInput('hour');
-                  return;
-                }
                 setIsHourEditing(false);
                 setIsMinuteEditing(false);
                 setIsSecondEditing(true);
                 focusTimeInput('second');
               }
             }}
-            onBlur={(e) => { commitMinuteInput(e.currentTarget); setIsMinuteEditing(false); }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
-          />
-        )}
-        :
-        <div onClick={() => { setIsSecondEditing(true); setTimeout(() => document.getElementById('second-' + timer.id)?.focus()) }} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
-          {(formatTime(effectiveTime).seconds % 60).toString().padStart(2, '0')}
-        </div>
-        {isSecondEditing && (
-          <input
-            type="number"
-            id={`second-${timer.id}`}
-            max={59}
-            min={0}
-            defaultValue={(formatTime(effectiveTime).seconds % 60).toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
-            onKeyDown={(e) => {
-              if (e.key === 'Tab' && e.shiftKey) {
-                e.preventDefault();
-                commitSecondInput(e.currentTarget);
-                setIsHourEditing(false);
-                setIsMinuteEditing(true);
-                setIsSecondEditing(false);
-                focusTimeInput('minute');
-              }
-            }}
-            onBlur={(e) => { commitSecondInput(e.currentTarget); setIsSecondEditing(false); }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
-          />
-        )}
-        {showMilliseconds && (
-          <>
-            :
-            <div>
-              {formatTime(effectiveTime).milliseconds.toString().padStart(3, '0')}
-            </div>
-          </>
-        )}
-      </div>
-      {showDecimalTime && (
-        <div className={`top-0 right-0 text-xl font-mono text-center flex justify-center mb-3 dark:text-white`}>
-          <div>
-            {convertToDecimalTime({ hour: formatTime(effectiveTime).hours, minutes: formatTime(effectiveTime).minutes % 60 }) + 'h'}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${timer.isRunning
+              ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/70'
+              : 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/70'
+              }`}
+          >
+            {timer.isRunning ? (
+              <>
+                <Pause className="w-4 h-4" />
+                Pause
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Start
+              </>
+            )}
+          </button>
+          <div className="flex gap-2">
+            {showGoals && (
+              <>
+                <button
+                  onClick={openGoalModal}
+                  className={`p-2 rounded-lg transition-colors ${timer.goalTime
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  title={timer.goalTime ? `Goal: ${formatGoalDisplay(timer.goalTime)}` : 'Set a time goal'}
+                >
+                  <Goal className="w-5 h-5" />
+                </button>
+                {showGoalModal && (
+                  <GoalModal
+                    timerName={timer.name}
+                    initialHours={goalInitial.hours}
+                    initialMinutes={goalInitial.minutes}
+                    initialSeconds={goalInitial.seconds}
+                    hasExistingGoal={!!timer.goalTime}
+                    onConfirm={stableConfirm}
+                    onClose={stableClose}
+                  />
+                )}
+              </>
+            )}
+            <button
+              onClick={() => onReset(timer.id)}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Reset timer"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById(`timer-${timer.id}`);
+                if (element) {
+                  element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
+                  setTimeout(() => onDelete(timer.id), 300);
+                } else {
+                  onDelete(timer.id);
+                }
+              }}
+              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
+              title="Delete timer"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-      )}
-
-      <div className="flex justify-between">
-        <button
-          onClick={() => onToggle(timer.id)}
-          onKeyDown={(e) => {
-            if (e.key === 'Tab' && e.shiftKey) {
-              e.preventDefault();
-              setIsHourEditing(false);
-              setIsMinuteEditing(false);
-              setIsSecondEditing(true);
-              focusTimeInput('second');
-            }
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${timer.isRunning
-            ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/70'
-            : 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/70'
-            }`}
-        >
-          {timer.isRunning ? (
-            <>
-              <Pause className="w-4 h-4" />
-              Pause
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Start
-            </>
-          )}
-        </button>
-        <div className="flex gap-2">
-          {showGoals && (
-            <>
-              <button
-                onClick={openGoalModal}
-                className={`p-2 rounded-lg transition-colors ${timer.goalTime
-                  ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                title={timer.goalTime ? `Goal: ${formatGoalDisplay(timer.goalTime)}` : 'Set a time goal'}
-              >
-                <Goal className="w-5 h-5" />
-              </button>
-              {showGoalModal && (
-                <GoalModal
-                  timerName={timer.name}
-                  initialHours={goalInitial.hours}
-                  initialMinutes={goalInitial.minutes}
-                  initialSeconds={goalInitial.seconds}
-                  hasExistingGoal={!!timer.goalTime}
-                  onConfirm={stableConfirm}
-                  onClose={stableClose}
-                />
-              )}
-            </>
-          )}
-          <button
-            onClick={() => onReset(timer.id)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Reset timer"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => {
-              const element = document.getElementById(`timer-${timer.id}`);
-              if (element) {
-                element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
-                setTimeout(() => onDelete(timer.id), 300);
-              } else {
-                onDelete(timer.id);
-              }
-            }}
-            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-            title="Delete timer"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
       {showGoals && timer.goalTime && (
-        <div className="absolute bottom-3 left-4 right-4 sm:left-6 sm:right-6 h-1.5 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+        <div className="group relative -mt-1.5 h-1.5 hover:h-9 overflow-hidden bg-gray-200 dark:bg-gray-700 transition-[height] duration-200 ease-out cursor-default">
           <div
-            className={`h-full w-full rounded-full ${goalReached ? 'bg-green-500 dark:bg-green-400' : 'bg-indigo-500 dark:bg-indigo-400'}`}
+            className={`absolute inset-0 ${goalReached ? 'bg-green-400 dark:bg-green-500' : 'bg-indigo-400 dark:bg-indigo-500'}`}
             style={{ transform: `scaleX(${goalProgress / 100})`, transformOrigin: 'left', willChange: 'transform' }}
           />
+          <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
+          <div className="relative flex items-center justify-between h-full px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75 pointer-events-none">
+            {goalReached ? (
+              <>
+                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                  {(() => {
+                    const totalSec = Math.floor(timer.goalTime / 1000);
+                    const h = Math.floor(totalSec / 3600);
+                    const m = Math.floor((totalSec % 3600) / 60);
+                    const s = totalSec % 60;
+                    const label = h > 0 && m > 0 ? `${h}h${m}min` : h > 0 ? `${h}h` : m > 0 && s > 0 ? `${m}min${s}s` : m > 0 ? `${m}min` : `${s}s`;
+                    return `🎯 Goal reached : ${label}`;
+                  })()}
+                </span>
+                <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                  {(() => {
+                    const totalSec = Math.floor(timer.goalTime / 1000);
+                    const h = Math.floor(totalSec / 3600);
+                    const m = Math.floor((totalSec % 3600) / 60);
+                    const s = totalSec % 60;
+                    if (h > 0 && m > 0) return `${h}h${m}min`;
+                    if (h > 0) return `${h}h`;
+                    if (m > 0 && s > 0) return `${m}min${s}s`;
+                    if (m > 0) return `${m}min`;
+                    return `Goal : ${s}s`;
+                  })()}
+                </span>
+                <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

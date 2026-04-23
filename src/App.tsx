@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, RefreshCw, Trash2, Timer, GripVertical, Plus, ArrowBigUpDash, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, GripVertical, Plus, ArrowBigUpDash, Check } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
 import {
   DndContext,
@@ -19,43 +19,12 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { FloatingButton, FloatingButtonItem } from './ui/FloatingButton';
 import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
-
-interface Timer {
-  id: string;
-  name: string;
-  time: number;
-  isRunning: boolean;
-  startTime: number | null;
-  creationDate?: Date;
-  isChecked: boolean;
-  hasBeenRendered?: boolean;
-}
-
-interface SortableTimerProps {
-  timer: Timer;
-  onToggle: (id: string) => void;
-  onToggleChecking: (id: string) => void;
-  onReset: (id: string) => void;
-  onDelete: (id: string) => void;
-  onNameChange: (id: string, name: string) => void;
-  onHourChange: (id: string, hour: number, prevHour: number) => void;
-  onMinuteChange: (id: string, minute: number, prevMinute: number) => void;
-  onSecondChange: (id: string, second: number, prevSecond: number) => void;
-  formatTime: (ms: number) => { hours: number, minutes: number, seconds: number, milliseconds: number };
-  onRender?: () => void;
-  showMilliseconds: boolean;
-  showDecimalTime: boolean;
-  isCheckingMode: boolean;
-  shouldAutoFocusName?: boolean;
-  onNameFocusHandled?: () => void;
-}
+import SortableTimer, { Timer } from './components/SortableTimer';
 
 const blurAllInputs = () => {
   const inputs = document.querySelectorAll('input');
@@ -64,304 +33,10 @@ const blurAllInputs = () => {
   });
 };
 
-function SortableTimer({ timer, onToggle, onToggleChecking, onReset, onDelete, onNameChange, onHourChange, onMinuteChange, onSecondChange, formatTime, onRender, showMilliseconds, showDecimalTime, isCheckingMode, shouldAutoFocusName, onNameFocusHandled }: SortableTimerProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: timer.id });
-  const [isHourEditing, setIsHourEditing] = useState(false);
-  const [isMinuteEditing, setIsMinuteEditing] = useState(false);
-  const [isSecondEditing, setIsSecondEditing] = useState(false);
-
-  const focusTimeInput = (unit: 'hour' | 'minute' | 'second') => {
-    setTimeout(() => {
-      document.getElementById(`${unit}-${timer.id}`)?.focus();
-    });
-  };
-
-  const parseInputValue = (value: string, fallbackValue: string) => {
-    const parsedValue = Number.parseInt(value, 10);
-    if (!Number.isNaN(parsedValue)) {
-      return parsedValue;
-    }
-    const parsedFallback = Number.parseInt(fallbackValue, 10);
-    return Number.isNaN(parsedFallback) ? 0 : parsedFallback;
-  };
-
-  const commitHourInput = (input: HTMLInputElement) => {
-    onHourChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
-  };
-
-  const commitMinuteInput = (input: HTMLInputElement) => {
-    onMinuteChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
-  };
-
-  const commitSecondInput = (input: HTMLInputElement) => {
-    onSecondChange(timer.id, parseInputValue(input.value, input.defaultValue), Number.parseInt(input.defaultValue, 10));
-  };
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  useEffect(() => {
-    if (onRender) {
-      setTimeout(() => {
-        onRender();
-      }, 300);
-    }
-  }, []);
-
-  const convertToDecimalTime = ({ hour, minutes }: { hour: number, minutes: number }) => {
-    if (typeof hour !== 'number' || typeof minutes !== 'number') {
-      throw new Error('Les propriétés hour et minutes doivent être des nombres.');
-    }
-
-    let decimalTime = hour + minutes / 60;
-    decimalTime = Math.round(decimalTime * 20) / 20;
-
-    return decimalTime;
-  }
-
+function DroppableDateGroup({ date, children }: { date: string; isActiveDrop: boolean; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id: `date-${date}` });
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`bg-white dark:bg-gray-800 items-center rounded-lg shadow-md p-4 sm:p-6 ${timer.isChecked ? 'ring-2 ring-green-300 dark:ring-green-700 bg-green-50/50 dark:bg-green-900/20' : ''} ${!timer.hasBeenRendered ? 'animate-in fade-in-0 duration-300 zoom-in' : ''}`}
-    >
-      <div className="flex items-center gap-2 mb-10">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded touch-none"
-          title="Drag timer"
-        >
-          <GripVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-        </div>
-        {isCheckingMode && (
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={timer.isChecked}
-              onChange={() => onToggleChecking(timer.id)}
-              className="peer sr-only"
-              aria-label={`Cocher le timer ${timer.name}`}
-              title='Check timer'
-            />
-            <span className="flex h-5 w-5 items-center justify-center rounded-md border-2 border-gray-300 bg-white text-transparent shadow-sm transition-all duration-200 ease-out peer-hover:scale-105 peer-checked:border-indigo-500 peer-checked:bg-indigo-500 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:border-indigo-500 dark:peer-checked:bg-indigo-500 dark:peer-focus-visible:ring-indigo-500 dark:peer-focus-visible:ring-offset-gray-800">
-              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-            </span>
-          </label>
-        )}
-        <input
-          id={`name-${timer.id}`}
-          type="text"
-          value={timer.name}
-          title={timer.name}
-          autoFocus={shouldAutoFocusName}
-          onFocus={(e) => {
-            e.target.select();
-            if (shouldAutoFocusName) {
-              onNameFocusHandled?.();
-            }
-          }}
-          onChange={(e) => onNameChange(timer.id, e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Tab') {
-              e.preventDefault();
-              if (e.shiftKey) {
-                setIsHourEditing(false);
-                setIsMinuteEditing(false);
-                setIsSecondEditing(true);
-                focusTimeInput('second');
-                return;
-              }
-              setIsHourEditing(true);
-              setIsMinuteEditing(false);
-              setIsSecondEditing(false);
-              focusTimeInput('hour');
-            }
-          }}
-          className={`flex-1 text-lg font-semibold bg-transparent border-b border-gray-200 dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none pb-1 dark:text-white ${timer.isChecked ? 'line-through opacity-70' : ''}`}
-        />
-      </div>
-      <div className={`text-4xl font-mono text-center flex justify-center ${!showDecimalTime ? 'mb-10' : ''} dark:text-white`}>
-        <div onClick={() => { setIsHourEditing(true); setTimeout(() => document.getElementById('hour-' + timer.id)?.focus()) }} className={`${isHourEditing ? 'hidden' : 'block'}`}>
-          {formatTime(timer.time).hours.toString().padStart(2, '0')}
-        </div>
-        {isHourEditing && (
-          <input
-            id={`hour-${timer.id}`}
-            type="number"
-            max={99}
-            min={0}
-            defaultValue={formatTime(timer.time).hours.toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
-            onKeyDown={(e) => {
-              if (e.key === 'Tab') {
-                e.preventDefault();
-                commitHourInput(e.currentTarget);
-                if (e.shiftKey) {
-                  setIsHourEditing(false);
-                  setIsMinuteEditing(false);
-                  setIsSecondEditing(false);
-                  document.getElementById(`name-${timer.id}`)?.focus();
-                  return;
-                }
-                setIsHourEditing(false);
-                setIsMinuteEditing(true);
-                setIsSecondEditing(false);
-                focusTimeInput('minute');
-              }
-            }}
-            onBlur={(e) => { commitHourInput(e.currentTarget); setIsHourEditing(false) }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
-          />
-        )}
-        :
-        <div onClick={() => { setIsMinuteEditing(true); setTimeout(() => document.getElementById('minute-' + timer.id)?.focus()) }} className={`${isMinuteEditing ? 'hidden' : 'block'}`}>
-          {(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
-        </div>
-        {isMinuteEditing && (
-          <input
-            type="number"
-            id={`minute-${timer.id}`}
-            max={59}
-            min={0}
-            defaultValue={(formatTime(timer.time).minutes % 60).toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
-            onKeyDown={(e) => {
-              if (e.key === 'Tab') {
-                e.preventDefault();
-                commitMinuteInput(e.currentTarget);
-                if (e.shiftKey) {
-                  setIsHourEditing(true);
-                  setIsMinuteEditing(false);
-                  setIsSecondEditing(false);
-                  focusTimeInput('hour');
-                  return;
-                }
-                setIsHourEditing(false);
-                setIsMinuteEditing(false);
-                setIsSecondEditing(true);
-                focusTimeInput('second');
-              }
-            }}
-            onBlur={(e) => { commitMinuteInput(e.currentTarget); setIsMinuteEditing(false) }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
-          />
-        )}
-        :
-        <div onClick={() => { setIsSecondEditing(true); setTimeout(() => document.getElementById('second-' + timer.id)?.focus()) }} className={`${isSecondEditing ? 'hidden' : 'block'}`}>
-          {(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
-        </div>
-        {isSecondEditing && (
-          <input
-            type="number"
-            id={`second-${timer.id}`}
-            max={59}
-            min={0}
-            defaultValue={(formatTime(timer.time).seconds % 60).toString().padStart(2, '0')}
-            onFocus={(e) => e.target.select()}
-            onKeyDown={(e) => {
-              if (e.key === 'Tab' && e.shiftKey) {
-                e.preventDefault();
-                commitSecondInput(e.currentTarget);
-                setIsHourEditing(false);
-                setIsMinuteEditing(true);
-                setIsSecondEditing(false);
-                focusTimeInput('minute');
-              }
-            }}
-            onBlur={(e) => { commitSecondInput(e.currentTarget); setIsSecondEditing(false) }}
-            className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
-          />
-        )}
-        {showMilliseconds && (
-          <>
-            :
-            <div>
-              {formatTime(timer.time).milliseconds.toString().padStart(3, '0')}
-            </div>
-          </>
-        )}
-      </div>
-      {showDecimalTime && (
-        <div className={`top-0 right-0 text-xl font-mono text-center flex justify-center mb-3 dark:text-white`}>
-          <div>
-            {convertToDecimalTime({ hour: formatTime(timer.time).hours, minutes: formatTime(timer.time).minutes % 60 }) + 'h'}
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-between">
-        <button
-          onClick={() => onToggle(timer.id)}
-          onKeyDown={(e) => {
-            if (e.key === 'Tab' && e.shiftKey) {
-              e.preventDefault();
-              setIsHourEditing(false);
-              setIsMinuteEditing(false);
-              setIsSecondEditing(true);
-              focusTimeInput('second');
-            }
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${timer.isRunning
-            ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/70'
-            : 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/70'
-            }`}
-        >
-          {timer.isRunning ? (
-            <>
-              <Pause className="w-4 h-4" />
-              Pause
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Start
-            </>
-          )}
-        </button>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onReset(timer.id)}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Reset timer"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => {
-              const element = document.getElementById(`timer-${timer.id}`);
-              if (element) {
-                element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
-                setTimeout(() => onDelete(timer.id), 300);
-              } else {
-                onDelete(timer.id);
-              }
-            }}
-            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-            title="Delete timer"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DroppableDateGroup({ date, children }: { date: string; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `date-${date}` });
-  return (
-    <div ref={setNodeRef} className={`mb-10 rounded-xl transition-all duration-150 ${isOver ? 'ring-2 ring-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
+    <div ref={setNodeRef} className={`mb-10 rounded-xl transition-all duration-150 `}>
       {children}
     </div>
   );
@@ -427,10 +102,15 @@ function App() {
     const saved = localStorage.getItem('showByDate');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showGoals, setShowGoals] = useState(() => {
+    const saved = localStorage.getItem('showGoals');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [pendingNameFocusTimerId, setPendingNameFocusTimerId] = useState<string | null>(null);
 
   const [activeWidgetId, setActiveWidgetId] = useState<string | null>(null);
   const [activeDragTimer, setActiveDragTimer] = useState<Timer | null>(null);
+  const [overDateKey, setOverDateKey] = useState<string | null>(null);
   const originalTimersRef = useRef<Timer[]>([]);
   const widgetAnimationRef = useRef<number>();
   const timersRef = useRef<Timer[]>(timers);
@@ -457,6 +137,10 @@ function App() {
     localStorage.setItem('showByDate', JSON.stringify(showByDate));
   }, [showByDate]);
 
+  useEffect(() => {
+    localStorage.setItem('showGoals', JSON.stringify(showGoals));
+  }, [showGoals]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -464,40 +148,28 @@ function App() {
     })
   );
 
-  const animationFrameRef = useRef<number>();
-
-  const updateTimers = useCallback((timestamp: number) => {
-    setTimers(prevTimers => {
-      const updatedTimers = prevTimers.map(timer => {
-        if (timer.isRunning && timer.startTime) {
-          const elapsed = Date.now() - timer.startTime;
-          return {
-            ...timer,
-            time: timer.time + elapsed,
-            startTime: Date.now()
-          };
-        }
-        return timer;
-      });
-
-      localStorage.setItem('timers', JSON.stringify(updatedTimers));
-      return updatedTimers;
-    });
-
-    animationFrameRef.current = requestAnimationFrame(updateTimers);
-  }, []);
-
+  // Periodic localStorage save every 2s (captures live time for running timers)
   useEffect(() => {
-    if (timers.some(timer => timer.isRunning)) {
-      animationFrameRef.current = requestAnimationFrame(updateTimers);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+    const save = () => {
+      const now = Date.now();
+      const snapshot = timersRef.current.map(t =>
+        t.isRunning && t.startTime
+          ? { ...t, time: t.time + (now - t.startTime), startTime: now }
+          : t
+      );
+      localStorage.setItem('timers', JSON.stringify(snapshot));
     };
-  }, [timers, updateTimers]);
+    const id = setInterval(save, 2000);
+    window.addEventListener('beforeunload', save);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') save();
+    });
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('beforeunload', save);
+      save();
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('showMilliseconds', JSON.stringify(showMilliseconds));
@@ -594,28 +266,30 @@ function App() {
 
   const toggleTimer = (id: string) => {
     blurAllInputs();
-    const timer = timers.find(timer => timer.id === id);
+    const now = Date.now();
+    const timer = timers.find(t => t.id === id);
     if (isSimpleMode && timer && !timer.isRunning) {
       setTimers(prev => {
-        const newTimers = prev.map(timer =>
-          timer.isRunning ? {
-            ...timer,
+        const newTimers = prev.map(t =>
+          t.isRunning ? {
+            ...t,
             isRunning: false,
+            time: t.time + (now - (t.startTime ?? now)),
             startTime: null
-          } : timer
+          } : t
         );
         localStorage.setItem('timers', JSON.stringify(newTimers));
         return newTimers;
       });
     }
-    const now = Date.now();
     setTimers(prev => {
-      const newTimers = prev.map(timer =>
-        timer.id === id ? {
-          ...timer,
-          isRunning: !timer.isRunning,
-          startTime: !timer.isRunning ? now : null
-        } : timer
+      const newTimers = prev.map(t =>
+        t.id === id ? {
+          ...t,
+          isRunning: !t.isRunning,
+          startTime: !t.isRunning ? now : null,
+          time: t.isRunning ? t.time + (now - (t.startTime ?? now)) : t.time
+        } : t
       );
       localStorage.setItem('timers', JSON.stringify(newTimers));
       return newTimers;
@@ -719,6 +393,16 @@ function App() {
     });
   }
 
+  const updateTimerGoal = (id: string, goalMs: number | null) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, goalTime: goalMs } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  };
+
   const updateTimerDate = (id: string, newDate: string) => {
     setTimers(prev => {
       const newTimers = prev.map(timer => {
@@ -736,12 +420,13 @@ function App() {
   const toggleAllTimers = () => {
     blurAllInputs();
     const now = Date.now();
-    const atLeaseOneRunning = timers.some(timer => timer.isRunning);
+    const atLeastOneRunning = timers.some(t => t.isRunning);
     setTimers(prev => {
-      const newTimers = prev.map(timer => ({
-        ...timer,
-        isRunning: !atLeaseOneRunning,
-        startTime: !atLeaseOneRunning ? now : null
+      const newTimers = prev.map(t => ({
+        ...t,
+        isRunning: !atLeastOneRunning,
+        startTime: !atLeastOneRunning ? now : null,
+        time: atLeastOneRunning && t.isRunning ? t.time + (now - (t.startTime ?? now)) : t.time
       }));
       localStorage.setItem('timers', JSON.stringify(newTimers));
       return newTimers;
@@ -853,10 +538,20 @@ function App() {
   const handleDragOver = (event: DragOverEvent) => {
     if (!showByDate) return;
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) { setOverDateKey(null); return; }
+    if (active.id === over.id) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
+
+    // Mettre à jour la date survolée
+    if (overId.startsWith('date-')) {
+      setOverDateKey(overId.replace('date-', ''));
+    } else {
+      const grouped = groupTimersByDate(timers);
+      const foundDate = Object.entries(grouped).find(([, dt]) => dt.some(t => t.id === overId))?.[0] ?? null;
+      setOverDateKey(foundDate);
+    }
 
     // Ignorer les zones de date (géré dans dragEnd)
     if (overId.startsWith('date-')) return;
@@ -890,6 +585,7 @@ function App() {
 
   const handleDragCancel = (_event: DragCancelEvent) => {
     setActiveDragTimer(null);
+    setOverDateKey(null);
     const original = originalTimersRef.current;
     if (original.length > 0) {
       setTimers(original);
@@ -900,6 +596,7 @@ function App() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragTimer(null);
+    setOverDateKey(null);
     originalTimersRef.current = [];
     const { active, over } = event;
 
@@ -1217,6 +914,8 @@ function App() {
         onImportJSON={handleFileUpload}
         onToggleByDate={() => setShowByDate(prev => !prev)} // New method
         onToggleWidget={() => toggleWidget()} // New method
+        showGoals={showGoals}
+        onToggleGoals={() => setShowGoals(prev => !prev)}
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 ">
@@ -1232,7 +931,7 @@ function App() {
             Object.entries(groupTimersByDate(timers)).map(([date, timers]) => {
               const isDayFullyChecked = timers.length > 0 && timers.every(timer => timer.isChecked);
               return (
-                <DroppableDateGroup key={date} date={date}>
+                <DroppableDateGroup key={date} date={date} isActiveDrop={overDateKey === date}>
                   <div className="flex items-center gap-4 text-gray-800 dark:text-white mb-4">
                     {isCheckingMode && (
                       <label className="flex items-center cursor-pointer select-none">
@@ -1269,7 +968,7 @@ function App() {
                         });
                       }}
                       className="ml-auto flex items-center justify-center h-8 w-8 rounded-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200/70 dark:hover:bg-gray-700/70 transition-colors"
-                      title="Ajouter un timer à cette date"
+                      title="Add a timer to this day"
                     >
                       <Plus className="w-5 h-5" />
                     </button>
@@ -1295,9 +994,11 @@ function App() {
                             onHourChange={updateTimerHour}
                             onMinuteChange={updateTimerMinute}
                             onSecondChange={updateTimerSecond}
+                            onGoalChange={updateTimerGoal}
                             formatTime={formatTime}
                             showMilliseconds={showMilliseconds}
                             showDecimalTime={showDecimalTime}
+                            showGoals={showGoals}
                           />
                         </div>
                       ))}
@@ -1328,9 +1029,11 @@ function App() {
                       onHourChange={updateTimerHour}
                       onMinuteChange={updateTimerMinute}
                       onSecondChange={updateTimerSecond}
+                      onGoalChange={updateTimerGoal}
                       formatTime={formatTime}
                       showMilliseconds={showMilliseconds}
                       showDecimalTime={showDecimalTime}
+                      showGoals={showGoals}
                     />
                   </div>
                 ))}

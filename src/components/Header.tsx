@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture } from 'lucide-react';
+import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture, Goal } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 import { CSSTransition } from 'react-transition-group';
 
@@ -12,6 +12,7 @@ interface HeaderProps {
   showMilliseconds: boolean;
   showByDate: boolean; // New property
   showWidget: boolean;
+  showGoals: boolean;
   onDeleteAll: () => void;
   onToggleAll: () => void;
   onAddTimer: () => void;
@@ -25,6 +26,7 @@ interface HeaderProps {
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onToggleByDate: () => void; // New method
   onToggleWidget: () => void; // New method
+  onToggleGoals: () => void;
 }
 
 function SettingsDropdown({
@@ -38,6 +40,7 @@ function SettingsDropdown({
   showMilliseconds,
   showByDate, // New property
   showWidget,
+  showGoals,
   onToggleSimpleMode,
   onToggleCheckingMode,
   onToggleDecimalTime,
@@ -47,6 +50,7 @@ function SettingsDropdown({
   onImportJSON,
   onToggleByDate, // New method
   onToggleWidget, // New method
+  onToggleGoals,
 }: {
   timers: any[];
   isOpen: boolean;
@@ -58,6 +62,7 @@ function SettingsDropdown({
   showMilliseconds: boolean;
   showByDate: boolean; // New property
   showWidget: boolean;
+  showGoals: boolean;
   onToggleSimpleMode: () => void;
   onToggleCheckingMode: () => void;
   onToggleDecimalTime: () => void;
@@ -66,7 +71,8 @@ function SettingsDropdown({
   onDownloadJSON: () => void;
   onImportJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onToggleByDate: () => void; // New method
-  onToggleWidget: () => void; // New method 
+  onToggleWidget: () => void; // New method
+  onToggleGoals: () => void;
 }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +105,13 @@ function SettingsDropdown({
         >
           <PictureInPicture className="w-4 h-4" />
           {showWidget ? 'Hide widget' : 'Show widget'}
+        </button>
+        <button
+          onClick={() => onToggleGoals()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <Goal className="w-4 h-4" />
+          {showGoals ? 'Disable' : 'Enable'} time goals
         </button>
         {/* } */}
         <button
@@ -161,6 +174,7 @@ export default function Header({
   showMilliseconds,
   showByDate, // New property
   showWidget,
+  showGoals,
   onDeleteAll,
   onToggleAll,
   onAddTimer,
@@ -174,6 +188,7 @@ export default function Header({
   onImportJSON,
   onToggleByDate, // New method
   onToggleWidget, // New method
+  onToggleGoals,
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const mobileSettingsRef = useRef<HTMLDivElement>(null);
@@ -224,6 +239,7 @@ export default function Header({
                 showMilliseconds={showMilliseconds}
                 showByDate={showByDate} // New property
                 showWidget={showWidget}
+                showGoals={showGoals}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleCheckingMode={onToggleCheckingMode}
                 onToggleDecimalTime={onToggleDecimalTime}
@@ -233,6 +249,7 @@ export default function Header({
                 onImportJSON={onImportJSON}
                 onToggleByDate={onToggleByDate} // New method
                 onToggleWidget={onToggleWidget}
+                onToggleGoals={onToggleGoals}
               />
             </div>
           </div>
@@ -289,6 +306,7 @@ export default function Header({
                 showMilliseconds={showMilliseconds}
                 showByDate={showByDate} // New property
                 showWidget={showWidget}
+                showGoals={showGoals}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleCheckingMode={onToggleCheckingMode}
                 onToggleDecimalTime={onToggleDecimalTime}
@@ -298,6 +316,7 @@ export default function Header({
                 onImportJSON={onImportJSON}
                 onToggleByDate={onToggleByDate} // New method
                 onToggleWidget={onToggleWidget}
+                onToggleGoals={onToggleGoals}
               />
             </div>
           </div>

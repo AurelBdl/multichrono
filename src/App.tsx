@@ -148,6 +148,15 @@ function App() {
     })
   );
 
+  // Tick every second to keep totals (header + date groups) up to date while a timer runs
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const hasRunning = timers.some(t => t.isRunning);
+    if (!hasRunning) return;
+    const id = setInterval(() => setTick(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [timers.some(t => t.isRunning)]);
+
   // Periodic localStorage save every 2s (captures live time for running timers)
   useEffect(() => {
     const save = () => {
@@ -656,7 +665,8 @@ function App() {
   };
 
   const getTotalTime = () => {
-    const totalms = timers.reduce((acc, timer) => acc + timer.time, 0);
+    const now = Date.now();
+    const totalms = timers.reduce((acc, timer) => acc + timer.time + (timer.isRunning && timer.startTime ? now - timer.startTime : 0), 0);
     return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
   }
 
@@ -832,7 +842,8 @@ function App() {
   };
 
   const getTotalTimeForDate = (timers: Timer[]) => {
-    const totalms = timers.reduce((acc, timer) => acc + timer.time, 0);
+    const now = Date.now();
+    const totalms = timers.reduce((acc, timer) => acc + timer.time + (timer.isRunning && timer.startTime ? now - timer.startTime : 0), 0);
     return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
   };
 

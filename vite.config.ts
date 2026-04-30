@@ -13,6 +13,10 @@ export default defineConfig({
         short_name: 'MultiTimer',
         description: 'An application to manage multiple timers',
         theme_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: '/icons/icon-192x192.png',
@@ -28,9 +32,23 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        runtimeCaching: [              // ✅ ajouté — cache les ressources réseau
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
+            }
+          }
+        ],
+
+        cleanupOutdatedCaches: true,   // ✅ ajouté — supprime les vieux caches
+        skipWaiting: true,
       },
       devOptions: {
         enabled: true, // Active le mode PWA en développement
+        type: 'module',
       },
     }),
   ],

@@ -14,6 +14,7 @@ export default defineConfig({
         description: 'An application to manage multiple timers',
         theme_color: '#ffffff',
         display: 'standalone',
+        display_override: ['window-controls-overlay'],
         orientation: 'portrait',
         start_url: '/',
         scope: '/',

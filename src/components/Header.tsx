@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture, Goal } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 import { CSSTransition } from 'react-transition-group';
@@ -189,10 +189,59 @@ export default function Header({
   onToggleByDate, // New method
   onToggleWidget, // New method
   onToggleGoals,
+  currentStickyDate,
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const mobileSettingsRef = useRef<HTMLDivElement>(null);
   const desktopSettingsRef = useRef<HTMLDivElement>(null);
+  const [displayedDate, setDisplayedDate] = useState<string | null>(null);
+  const [animating, setAnimating] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'up' | 'down'>('up');
+
+  const formattedStickyDate = useMemo(() => {
+    if (!currentStickyDate) return null;
+    const [year, month, day] = currentStickyDate.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+  }, [currentStickyDate]);
+
+  useEffect(() => {
+    if (formattedStickyDate === displayedDate) return;
+    if (formattedStickyDate === null) {
+      // Animate out
+      setSlideDirection('up');
+      setAnimating(true);
+      const timer = setTimeout(() => {
+        setDisplayedDate(null);
+        setAnimating(false);
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+    if (displayedDate === null) {
+      // Animate in
+      setDisplayedDate(formattedStickyDate);
+      setSlideDirection('down');
+      setAnimating(true);
+      const timer = setTimeout(() => setAnimating(false), 50);
+      return () => clearTimeout(timer);
+    }
+    // Date changed: slide old out, then slide new in
+    setSlideDirection('up');
+    setAnimating(true);
+    const timer = setTimeout(() => {
+      setDisplayedDate(formattedStickyDate);
+      setSlideDirection('down');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setAnimating(false);
+        });
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [formattedStickyDate]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -209,7 +258,7 @@ export default function Header({
   }, []);
 
   return (
-    <div className="sticky top-0 z-50 backdrop-blur-sm bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-4">
+    <div data-sticky-header className="sticky top-0 z-50 backdrop-blur-sm bg-white/70 dark:bg-gray-900/70 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-8 py-4">
       <div className="max-w-12xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="w-full sm:w-auto flex items-center justify-between gap-3">
@@ -218,12 +267,28 @@ export default function Header({
                 <h1 className="text-3xl sm:text-4xl text-gray-800 dark:text-white">{getTotalTime()}</h1>
               }
             </div>
-            <div className="sm:hidden relative" ref={mobileSettingsRef}>
-              <button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isSettingsOpen
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            <div className="sm:hidden flex items-center gap-2">
+              {showByDate && displayedDate && (
+                <div className="overflow-hidden h-7 flex items-center">
+                  <span
+                    className={`sticky-date-label inline-block text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap ${
+                      animating
+                        ? slideDirection === 'up'
+                          ? 'sticky-date-out'
+                          : 'sticky-date-enter'
+                        : 'sticky-date-visible'
+                    }`}
+                  >
+                    {displayedDate}
+                  </span>
+                </div>
+              )}
+              <div className="relative" ref={mobileSettingsRef}>
+                <button
+                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${isSettingsOpen
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
               >
                 <Settings className="w-6 h-6" />
@@ -251,9 +316,25 @@ export default function Header({
                 onToggleWidget={onToggleWidget}
                 onToggleGoals={onToggleGoals}
               />
+              </div>
             </div>
           </div>
           <div className="w-full sm:w-auto justify-end items-center gap-4 hidden sm:flex">
+            {showByDate && displayedDate && (
+              <div className="overflow-hidden h-7 flex items-center">
+                <span
+                  className={`sticky-date-label inline-block text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap ${
+                    animating
+                      ? slideDirection === 'up'
+                        ? 'sticky-date-out'
+                        : 'sticky-date-enter'
+                      : 'sticky-date-visible'
+                  }`}
+                >
+                  {displayedDate}
+                </span>
+              </div>
+            )}
             {timers.length > 0 && (
               <ConfirmDeleteButton onDelete={onDeleteAll} />
             )}

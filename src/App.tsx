@@ -108,6 +108,7 @@ function App() {
     return saved ? JSON.parse(saved) : false;
   });
   const [pendingNameFocusTimerId, setPendingNameFocusTimerId] = useState<string | null>(null);
+  const [currentStickyDate, setCurrentStickyDate] = useState<string | null>(null);
 
   const [activeWidgetId, setActiveWidgetId] = useState<string | null>(null);
   const [activeDragTimer, setActiveDragTimer] = useState<Timer | null>(null);
@@ -129,8 +130,10 @@ function App() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
     }
   }, [isDarkMode]);
 
@@ -141,6 +144,29 @@ function App() {
   useEffect(() => {
     localStorage.setItem('showGoals', JSON.stringify(showGoals));
   }, [showGoals]);
+
+  // Detect which date group header is at the top of the viewport (behind sticky header)
+  useEffect(() => {
+    if (!showByDate) {
+      setCurrentStickyDate(null);
+      return;
+    }
+    const handleScroll = () => {
+      const headerEl = document.querySelector('[data-sticky-header]');
+      const headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 80;
+      const dateHeaders = document.querySelectorAll<HTMLElement>('[data-date-group]');
+      let found: string | null = null;
+      dateHeaders.forEach(el => {
+        if (el.getBoundingClientRect().top <= headerBottom) {
+          found = el.getAttribute('data-date-group');
+        }
+      });
+      setCurrentStickyDate(found);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [showByDate, timers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -928,6 +954,7 @@ function App() {
         onToggleWidget={() => toggleWidget()} // New method
         showGoals={showGoals}
         onToggleGoals={() => setShowGoals(prev => !prev)}
+        currentStickyDate={currentStickyDate}
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 flex-1 w-full">
@@ -944,7 +971,7 @@ function App() {
               const isDayFullyChecked = timers.length > 0 && timers.every(timer => timer.isChecked);
               return (
                 <DroppableDateGroup key={date} date={date} isActiveDrop={overDateKey === date}>
-                  <div className="flex items-center gap-4 text-gray-800 dark:text-white mb-4">
+                  <div data-date-group={date} className="flex items-center gap-4 text-gray-800 dark:text-white mb-4">
                     {isCheckingMode && (
                       <label className="flex items-center cursor-pointer select-none">
                         <input

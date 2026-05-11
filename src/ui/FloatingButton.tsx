@@ -64,7 +64,7 @@ function FloatingButton({ className, children, triggerContent }: FloatingButtonP
   };
 
   return (
-    <div className="visible sm:hidden fixed bottom-0 right-0">
+    <div className="visible sm:hidden fixed bottom-0 right-0 z-50">
       <AnimatePresence>
         <motion.ul
           key='children'

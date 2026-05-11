@@ -24,6 +24,7 @@ import {
 import { FloatingButton, FloatingButtonItem } from './ui/FloatingButton';
 import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import SortableTimer, { Timer } from './components/SortableTimer';
 
 const blurAllInputs = () => {
@@ -848,7 +849,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleNativeDragOver} onDrop={handleDrop}>
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleNativeDragOver} onDrop={handleDrop}>
       <FloatingButton
         triggerContent={
           <button className="flex items-center justify-center h-14 w-14 rounded-full bg-slate-300 dark:bg-slate-700 text-gray-600 dark:text-white/80 z-100">
@@ -929,7 +930,7 @@ function App() {
         onToggleGoals={() => setShowGoals(prev => !prev)}
       />
 
-      <div className="max-w-12xl mx-auto p-4 sm:p-8 ">
+      <div className="max-w-12xl mx-auto p-4 sm:p-8 flex-1 w-full">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -1074,6 +1075,7 @@ function App() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

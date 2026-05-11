@@ -92,7 +92,7 @@ const GoalModal = React.memo(function GoalModal({
       className={`fixed inset-0 z-50 flex items-center justify-center ${isClosing ? 'animate-out fade-out-0 duration-150' : 'animate-in fade-in-0 duration-200'}`}
       onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}
     >
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
       <div
         className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80 ${isClosing ? 'animate-out zoom-out-95 duration-150' : 'animate-in zoom-in-95 duration-200'}`}
         onMouseDown={(e) => e.stopPropagation()}
@@ -399,7 +399,6 @@ function SortableTimer({
               <input
                 id={`hour-${timer.id}`}
                 type="number"
-                max={99}
                 min={0}
                 defaultValue={formatTime(effectiveTime).hours.toString().padStart(2, '0')}
                 onFocus={(e) => e.target.select()}
@@ -421,7 +420,8 @@ function SortableTimer({
                   }
                 }}
                 onBlur={(e) => { commitHourInput(e.currentTarget); setIsHourEditing(false); }}
-                className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none w-[2ch] bg-transparent dark:text-white`}
+                style={{ width: `${Math.max(2, formatTime(effectiveTime).hours.toString().length)}ch` }}
+                className={`text-4xl font-mono text-center border-b dark:border-gray-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:outline-none bg-transparent dark:text-white`}
               />
             )}
             :
@@ -592,7 +592,7 @@ function SortableTimer({
             {goalReached ? (
               <>
                 {/* Left: goal reached message */}
-                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                <span className="text-xs font-semibold text-white drop-shadow-sm relative">
                   {(() => {
                     const totalSec = Math.floor(timer.goalTime / 1000);
                     const h = Math.floor(totalSec / 3600);
@@ -603,12 +603,14 @@ function SortableTimer({
                   })()}
                 </span>
                 {/* Right: percentage */}
-                <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
+                <span className="text-xs font-semibold text-white drop-shadow-sm relative">{Math.round(goalProgressRaw)}%</span>
               </>
             ) : (
               <>
+                {/* Center: percentage (absolute so it's always truly centered) */}
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
                 {/* Left: goal */}
-                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                <span className="text-xs font-semibold text-white drop-shadow-sm relative">
                   {(() => {
                     const totalSec = Math.floor(timer.goalTime / 1000);
                     const h = Math.floor(totalSec / 3600);
@@ -621,10 +623,8 @@ function SortableTimer({
                     return `Goal : ${s}s`;
                   })()}
                 </span>
-                {/* Center: percentage */}
-                <span className="text-xs font-semibold text-white drop-shadow-sm">{Math.round(goalProgressRaw)}%</span>
                 {/* Right: remaining */}
-                <span className="text-xs font-semibold text-white drop-shadow-sm">
+                <span className="text-xs font-semibold text-white drop-shadow-sm relative">
                   {(() => {
                     const diffMs = timer.goalTime - effectiveTime;
                     const totalSec = Math.floor(diffMs / 1000);

@@ -117,6 +117,7 @@ function App() {
   const widgetAnimationRef = useRef<number>();
   const timersRef = useRef<Timer[]>(timers);
   const isDarkModeRef = useRef<boolean>(isDarkMode);
+  const toggleTimerRef = useRef<(id: string) => void>(() => {});
 
   // Garder les références à jour
   useEffect(() => {
@@ -332,6 +333,9 @@ function App() {
     });
   };
 
+  // Keep ref up to date so PiP handlers always call the latest version
+  toggleTimerRef.current = toggleTimer;
+
   const resetTimer = (id: string) => {
     setTimers(prev => {
       const newTimers = prev.map(timer =>
@@ -492,6 +496,35 @@ function App() {
     const video = document.createElement('video');
     video.muted = true;
     video.srcObject = canvas.captureStream();
+
+    // Track last active timer so we can resume it from PiP
+    let lastActiveTimerId: string | null = timersRef.current.find(t => t.isRunning)?.id ?? null;
+    // Flag to distinguish programmatic play/pause from user-initiated PiP controls
+    let isProgrammaticPlayPause = false;
+
+    // Set up Media Session API for PiP play/pause controls
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (isProgrammaticPlayPause) return;
+        const targetId = lastActiveTimerId || timersRef.current[0]?.id;
+        if (targetId) {
+          const timer = timersRef.current.find(t => t.id === targetId);
+          if (timer && !timer.isRunning) {
+            toggleTimerRef.current(targetId);
+          }
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (isProgrammaticPlayPause) return;
+        const runningTimer = timersRef.current.find(t => t.isRunning);
+        if (runningTimer) {
+          lastActiveTimerId = runningTimer.id;
+          toggleTimerRef.current(runningTimer.id);
+        }
+      });
+    }
+
     video.onloadedmetadata = () => {
       video.play().then(() => {
         video.requestPictureInPicture().catch(error => {
@@ -501,6 +534,8 @@ function App() {
       });
     };
 
+    let lastMetadataTitle = '';
+
     const drawTimer = () => {
       if (!ctx) return;
 
@@ -509,33 +544,65 @@ function App() {
       // Récupérer le timer en cours depuis la référence
       const runningTimer = timersRef.current.find(t => t.isRunning);
 
+      // Track last active timer for resuming
+      if (runningTimer) {
+        lastActiveTimerId = runningTimer.id;
+      }
+
+      // Update Media Session metadata (only when title changes to avoid waste)
+      if ('mediaSession' in navigator) {
+        const currentTitle = runningTimer ? runningTimer.name : 'Paused';
+        if (currentTitle !== lastMetadataTitle) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: currentTitle,
+            artist: 'MultiChrono',
+          });
+          lastMetadataTitle = currentTitle;
+        }
+      }
+
       // Fond
       ctx.fillStyle = isDarkModeRef.current ? '#1e2939' : '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      if (!runningTimer) {
-        // Afficher "No timer running" si aucun timer n'est actif
+      // Afficher le dernier timer mis en pause si aucun ne tourne
+      const displayTimer = runningTimer
+        ?? (lastActiveTimerId ? timersRef.current.find(t => t.id === lastActiveTimerId) : null);
+
+      if (!displayTimer) {
+        // Aucun timer n'a encore été lancé
         ctx.font = '24px Arial';
         ctx.fillStyle = isDarkModeRef.current ? '#ffffff' : '#1e2939';
         ctx.textAlign = 'center';
         ctx.fillText('No timer running', canvas.width / 2, canvas.height / 2);
       } else {
         // Calculer le temps actuel
-        const currentTime = runningTimer.time + (runningTimer.startTime ? now - runningTimer.startTime : 0);
+        const currentTime = displayTimer.time + (displayTimer.isRunning && displayTimer.startTime ? now - displayTimer.startTime : 0);
 
-        // Nom du timer
+        // Nom du timer (avec indicateur pause si arrêté)
         ctx.font = '24px Arial';
-        ctx.fillStyle = isDarkModeRef.current ? '#ffffff' : '#1e2939';
+        ctx.fillStyle = isDarkModeRef.current ? (runningTimer ? '#ffffff' : '#9ca3af') : (runningTimer ? '#1e2939' : '#6b7280');
         ctx.textAlign = 'center';
-        ctx.fillText(runningTimer.name, canvas.width / 2, 60);
+        const namePrefix = runningTimer ? '' : '⏸ ';
+        ctx.fillText(namePrefix + displayTimer.name, canvas.width / 2, 60);
 
         // Temps
         const { hours, minutes, seconds } = formatTime(currentTime);
         const timeString = `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
         ctx.font = '36px monospace';
-        ctx.fillStyle = isDarkModeRef.current ? '#ffffff' : '#1e2939';
+        ctx.fillStyle = isDarkModeRef.current ? (runningTimer ? '#ffffff' : '#9ca3af') : (runningTimer ? '#1e2939' : '#6b7280');
         ctx.fillText(timeString, canvas.width / 2, 120);
+      }
+
+      // Sync video play/pause state with timer state to control PiP button
+      if (runningTimer && video.paused) {
+        isProgrammaticPlayPause = true;
+        video.play().catch(() => {}).finally(() => { isProgrammaticPlayPause = false; });
+      } else if (!runningTimer && !video.paused) {
+        isProgrammaticPlayPause = true;
+        video.pause();
+        isProgrammaticPlayPause = false;
       }
 
       widgetAnimationRef.current = requestAnimationFrame(drawTimer);
@@ -550,6 +617,13 @@ function App() {
         cancelAnimationFrame(widgetAnimationRef.current);
       }
       setActiveWidgetId(null);
+      // Nettoyer les handlers Media Session
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
     });
   };
 

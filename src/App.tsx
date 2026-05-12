@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Pause, GripVertical, Plus, ArrowBigUpDash, Check } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
 import {
@@ -26,6 +27,7 @@ import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import SortableTimer, { Timer } from './components/SortableTimer';
+import PipTimerWidget from './components/PipTimerWidget';
 
 const blurAllInputs = () => {
   const inputs = document.querySelectorAll('input');
@@ -111,22 +113,16 @@ function App() {
   const [currentStickyDate, setCurrentStickyDate] = useState<string | null>(null);
 
   const [activeWidgetId, setActiveWidgetId] = useState<string | null>(null);
+  const [pipContainer, setPipContainer] = useState<HTMLElement | null>(null);
   const [activeDragTimer, setActiveDragTimer] = useState<Timer | null>(null);
   const [overDateKey, setOverDateKey] = useState<string | null>(null);
   const originalTimersRef = useRef<Timer[]>([]);
-  const widgetAnimationRef = useRef<number>();
   const timersRef = useRef<Timer[]>(timers);
-  const isDarkModeRef = useRef<boolean>(isDarkMode);
-  const toggleTimerRef = useRef<(id: string) => void>(() => {});
 
   // Garder les références à jour
   useEffect(() => {
     timersRef.current = timers;
   }, [timers]);
-
-  useEffect(() => {
-    isDarkModeRef.current = isDarkMode;
-  }, [isDarkMode]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -333,9 +329,6 @@ function App() {
     });
   };
 
-  // Keep ref up to date so PiP handlers always call the latest version
-  toggleTimerRef.current = toggleTimer;
-
   const resetTimer = (id: string) => {
     setTimers(prev => {
       const newTimers = prev.map(timer =>
@@ -473,168 +466,90 @@ function App() {
     });
   };
 
-  const toggleWidget = () => {
-    if (document.pictureInPictureElement) {
-      document.exitPictureInPicture();
+  const toggleWidget = async () => {
+    // If PiP is already open, close it
+    if (documentPictureInPicture.window) {
+      documentPictureInPicture.window.close();
+      setPipContainer(null);
       setActiveWidgetId(null);
-      if (widgetAnimationRef.current) {
-        cancelAnimationFrame(widgetAnimationRef.current);
-      }
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 180;
-    const ctx = canvas.getContext('2d');
+    try {
+      const pipWindow = await documentPictureInPicture.requestWindow({
+        width: 255,
+        height: 200,
+        preferInitialWindowPlacement: true
+      });
 
-    if (!ctx) {
-      console.error('Impossible d\'obtenir le contexte 2D');
-      return;
-    }
-
-    const video = document.createElement('video');
-    video.muted = true;
-    video.srcObject = canvas.captureStream();
-
-    // Track last active timer so we can resume it from PiP
-    let lastActiveTimerId: string | null = timersRef.current.find(t => t.isRunning)?.id ?? null;
-    // Flag to distinguish programmatic play/pause from user-initiated PiP controls
-    let isProgrammaticPlayPause = false;
-
-    // Set up Media Session API for PiP play/pause controls
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => {
-        if (isProgrammaticPlayPause) return;
-        const targetId = lastActiveTimerId || timersRef.current[0]?.id;
-        if (targetId) {
-          const timer = timersRef.current.find(t => t.id === targetId);
-          if (timer && !timer.isRunning) {
-            toggleTimerRef.current(targetId);
+      // Copy stylesheets so Tailwind classes work
+      [...document.styleSheets].forEach((styleSheet) => {
+        try {
+          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+          const style = document.createElement('style');
+          style.textContent = cssRules;
+          pipWindow.document.head.appendChild(style);
+        } catch {
+          if (styleSheet.href) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = styleSheet.type;
+            link.media = styleSheet.media.mediaText;
+            link.href = styleSheet.href;
+            pipWindow.document.head.appendChild(link);
           }
         }
       });
 
-      navigator.mediaSession.setActionHandler('pause', () => {
-        if (isProgrammaticPlayPause) return;
-        const runningTimer = timersRef.current.find(t => t.isRunning);
-        if (runningTimer) {
-          lastActiveTimerId = runningTimer.id;
-          toggleTimerRef.current(runningTimer.id);
-        }
+      // Set up the PiP document
+      pipWindow.document.documentElement.style.height = '100%';
+      pipWindow.document.body.style.margin = '0';
+      pipWindow.document.body.style.height = '100%';
+
+      // Apply dark mode
+      if (isDarkMode) {
+        pipWindow.document.documentElement.classList.add('dark');
+        pipWindow.document.documentElement.style.colorScheme = 'dark';
+      }
+
+      // Create React portal container
+      const container = pipWindow.document.createElement('div');
+      container.id = 'pip-root';
+      container.style.height = '100%';
+      pipWindow.document.body.appendChild(container);
+
+      setPipContainer(container);
+      setActiveWidgetId('widget-active');
+
+      // Cleanup on PiP window close
+      pipWindow.addEventListener('pagehide', () => {
+        setPipContainer(null);
+        setActiveWidgetId(null);
       });
-    }
-
-    video.onloadedmetadata = () => {
-      video.play().then(() => {
-        video.requestPictureInPicture().catch(error => {
-          console.error('Erreur PiP:', error);
-          setActiveWidgetId(null);
-        });
-      });
-    };
-
-    let lastMetadataTitle = '';
-
-    const drawTimer = () => {
-      if (!ctx) return;
-
-      const now = Date.now();
-
-      // Récupérer le timer en cours depuis la référence
-      const runningTimer = timersRef.current.find(t => t.isRunning);
-
-      // Track last active timer for resuming
-      if (runningTimer) {
-        lastActiveTimerId = runningTimer.id;
-      }
-
-      // Update Media Session metadata (only when title changes to avoid waste)
-      if ('mediaSession' in navigator) {
-        const currentTitle = runningTimer ? runningTimer.name : 'Paused';
-        if (currentTitle !== lastMetadataTitle) {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: currentTitle,
-            artist: 'MultiChrono',
-          });
-          lastMetadataTitle = currentTitle;
-        }
-      }
-
-      // Fond
-      ctx.fillStyle = isDarkModeRef.current ? '#1e2939' : '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Afficher le dernier timer mis en pause si aucun ne tourne
-      const displayTimer = runningTimer
-        ?? (lastActiveTimerId ? timersRef.current.find(t => t.id === lastActiveTimerId) : null);
-
-      if (!displayTimer) {
-        // Aucun timer n'a encore été lancé
-        ctx.font = '24px Arial';
-        ctx.fillStyle = isDarkModeRef.current ? '#ffffff' : '#1e2939';
-        ctx.textAlign = 'center';
-        ctx.fillText('No timer running', canvas.width / 2, canvas.height / 2);
-      } else {
-        // Calculer le temps actuel
-        const currentTime = displayTimer.time + (displayTimer.isRunning && displayTimer.startTime ? now - displayTimer.startTime : 0);
-
-        // Nom du timer (avec indicateur pause si arrêté)
-        ctx.font = '24px Arial';
-        ctx.fillStyle = isDarkModeRef.current ? (runningTimer ? '#ffffff' : '#9ca3af') : (runningTimer ? '#1e2939' : '#6b7280');
-        ctx.textAlign = 'center';
-        const namePrefix = runningTimer ? '' : '⏸ ';
-        ctx.fillText(namePrefix + displayTimer.name, canvas.width / 2, 60);
-
-        // Temps
-        const { hours, minutes, seconds } = formatTime(currentTime);
-        const timeString = `${hours.toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-
-        ctx.font = '36px monospace';
-        ctx.fillStyle = isDarkModeRef.current ? (runningTimer ? '#ffffff' : '#9ca3af') : (runningTimer ? '#1e2939' : '#6b7280');
-        ctx.fillText(timeString, canvas.width / 2, 120);
-      }
-
-      // Sync video play/pause state with timer state to control PiP button
-      if (runningTimer && video.paused) {
-        isProgrammaticPlayPause = true;
-        video.play().catch(() => {}).finally(() => { isProgrammaticPlayPause = false; });
-      } else if (!runningTimer && !video.paused) {
-        isProgrammaticPlayPause = true;
-        video.pause();
-        isProgrammaticPlayPause = false;
-      }
-
-      widgetAnimationRef.current = requestAnimationFrame(drawTimer);
-    };
-
-    setActiveWidgetId('widget-active');
-    drawTimer();
-
-    // Nettoyer l'animation quand le PiP est fermé
-    video.addEventListener('leavepictureinpicture', () => {
-      if (widgetAnimationRef.current) {
-        cancelAnimationFrame(widgetAnimationRef.current);
-      }
+    } catch (error) {
+      console.error('Error opening Document PiP:', error);
       setActiveWidgetId(null);
-      // Nettoyer les handlers Media Session
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.setActionHandler('play', null);
-        navigator.mediaSession.setActionHandler('pause', null);
-        navigator.mediaSession.metadata = null;
-        navigator.mediaSession.playbackState = 'none';
-      }
-    });
+    }
   };
 
-  // Effet pour nettoyer le widget quand le composant est démonté
+  // Sync dark mode to PiP window
+  useEffect(() => {
+    const pipWindow = documentPictureInPicture?.window;
+    if (!pipWindow) return;
+    if (isDarkMode) {
+      pipWindow.document.documentElement.classList.add('dark');
+      pipWindow.document.documentElement.style.colorScheme = 'dark';
+    } else {
+      pipWindow.document.documentElement.classList.remove('dark');
+      pipWindow.document.documentElement.style.colorScheme = 'light';
+    }
+  }, [isDarkMode, pipContainer]);
+
+  // Cleanup PiP on unmount
   useEffect(() => {
     return () => {
-      if (widgetAnimationRef.current) {
-        cancelAnimationFrame(widgetAnimationRef.current);
-      }
-      if (document.pictureInPictureElement) {
-        document.exitPictureInPicture();
+      if (documentPictureInPicture?.window) {
+        documentPictureInPicture.window.close();
       }
     };
   }, []);
@@ -1177,6 +1092,22 @@ function App() {
         )}
       </div>
       <Footer />
+
+      {pipContainer && createPortal(
+        <PipTimerWidget
+          timers={timers}
+          onToggle={toggleTimer}
+          onNameChange={updateTimerName}
+          onHourChange={updateTimerHour}
+          onMinuteChange={updateTimerMinute}
+          onSecondChange={updateTimerSecond}
+          formatTime={formatTime}
+          showByDate={showByDate}
+          showDecimalTime={showDecimalTime}
+          showGoals={showGoals}
+        />,
+        pipContainer
+      )}
     </div>
   );
 }

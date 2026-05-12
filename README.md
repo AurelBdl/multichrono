@@ -1,18 +1,18 @@
-# ⏱️ MultiTimer — The Ultimate Timer App
+# ⏱️ MultiTimer
 
-**MultiTimer** is a sleek, powerful, and fully local multi-timer application built for anyone who needs to track time across multiple tasks simultaneously. Whether you're a freelancer logging billable hours, a developer tracking focus sessions, or just someone who likes to stay on top of their time — MultiTimer has you covered.
+**MultiTimer** is a sleek, powerful, and fully local multi-timer application built for anyone who needs to track time across multiple tasks simultaneously. Whether you're a freelancer logging billable hours, a developer tracking focus sessions, or just someone who likes to stay on top of their time, MultiTimer has you covered.
 
-> 🔒 **100% Local & Private** — No accounts, no servers, no tracking. All your data stays in your browser's localStorage. Your timers never leave your device.
+> 🔒 **100% Local & Private**: no accounts, no servers, no tracking. All your data stays in your browser's localStorage. Your timers never leave your device.
 
 ## ✨ Features
 
 ### 🕐 Multiple Simultaneous Timers
 
-Create as many timers as you need. Name them, start them, pause them, reset them — all independently. Each timer tracks time down to the millisecond with real-time updates powered by `requestAnimationFrame`.
+Create as many timers as you need. Name them, start them, pause them, reset them, all independently. Each timer tracks time down to the millisecond with real-time updates powered by `requestAnimationFrame`.
 
 ### 🔀 Single & Multi Mode
 
-- **Single mode** (default): Only one timer runs at a time. Starting a new timer automatically pauses the active one — perfect for task switching.
+- **Single mode** (default): Only one timer runs at a time. Starting a new timer automatically pauses the active one, perfect for task switching.
 - **Multi mode**: Run multiple timers simultaneously for parallel task tracking.
 
 ### 🎯 Time Goals
@@ -38,7 +38,7 @@ Reorder timers freely with drag and drop (powered by `@dnd-kit`). When grouped b
 
 ### 📋 Paste to Create
 
-Paste text from your clipboard to instantly create a new timer with that text as its name. Supports Trello card URLs — the card title is automatically extracted.
+Paste text from your clipboard to instantly create a new timer with that text as its name. Supports Trello card URLs: the card title is automatically extracted.
 
 ### 🖼️ Picture-in-Picture Widget
 
@@ -68,11 +68,11 @@ Install MultiTimer on your device like a native app. It works offline, updates a
 
 ### 🔄 Persistent State
 
-Everything is saved to `localStorage` in real-time. Close your browser, reopen it — your timers pick up right where they left off, even if they were running. A periodic save every 2 seconds plus saves on tab hide and before unload ensure no data is lost.
+Everything is saved to `localStorage` in real-time. Close your browser, reopen it, your timers pick up right where they left off, even if they were running. A periodic save every 2 seconds plus saves on tab hide and before unload ensure no data is lost.
 
 ### 🎨 Smooth Animations
 
-Polished transitions and animations throughout the UI powered by Framer Motion and Tailwind CSS Animate — from timer creation to deletion, drag overlays, settings dropdown, and goal modals.
+Polished transitions and animations throughout the UI powered by Framer Motion and Tailwind CSS Animate, from timer creation to deletion, drag overlays, settings dropdown, and goal modals.
 
 ## 🛠️ Tech Stack
 

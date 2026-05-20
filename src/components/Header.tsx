@@ -11,6 +11,7 @@ interface HeaderProps {
   showDecimalTime: boolean;
   showMilliseconds: boolean;
   showByDate: boolean; // New property
+  supportsWidget: boolean;
   showWidget: boolean;
   showGoals: boolean;
   showAffairsAndMissions: boolean;
@@ -42,6 +43,7 @@ function SettingsDropdown({
   showDecimalTime,
   showMilliseconds,
   showByDate, // New property
+  supportsWidget,
   showWidget,
   showGoals,
   showAffairsAndMissions,
@@ -66,6 +68,7 @@ function SettingsDropdown({
   showDecimalTime: boolean;
   showMilliseconds: boolean;
   showByDate: boolean; // New property
+  supportsWidget: boolean;
   showWidget: boolean;
   showGoals: boolean;
   showAffairsAndMissions: boolean;
@@ -106,13 +109,15 @@ function SettingsDropdown({
           <CalendarClock className="w-4 h-4" />
           {showByDate ? 'Ungroup' : 'Group'} by date
         </button>
-        <button
-          onClick={() => onToggleWidget()} // New button
-          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        >
-          <PictureInPicture className="w-4 h-4" />
-          {showWidget ? 'Hide widget' : 'Show widget'}
-        </button>
+        {supportsWidget && (
+          <button
+            onClick={() => onToggleWidget()} // New button
+            className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <PictureInPicture className="w-4 h-4" />
+            {showWidget ? 'Hide widget' : 'Show widget'}
+          </button>
+        )}
         <button
           onClick={() => onToggleGoals()}
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -187,6 +192,7 @@ export default function Header({
   showDecimalTime,
   showMilliseconds,
   showByDate, // New property
+  supportsWidget,
   showWidget,
   showGoals,
   showAffairsAndMissions,
@@ -319,6 +325,7 @@ export default function Header({
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
                 showByDate={showByDate} // New property
+                supportsWidget={supportsWidget}
                 showWidget={showWidget}
                 showGoals={showGoals}
                 showAffairsAndMissions={showAffairsAndMissions}
@@ -404,6 +411,7 @@ export default function Header({
                 showDecimalTime={showDecimalTime}
                 showMilliseconds={showMilliseconds}
                 showByDate={showByDate} // New property
+                supportsWidget={supportsWidget}
                 showWidget={showWidget}
                 showGoals={showGoals}
                 showAffairsAndMissions={showAffairsAndMissions}

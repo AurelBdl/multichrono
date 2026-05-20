@@ -95,6 +95,18 @@ const parseStoredArray = <T,>(key: string, validator: (value: unknown) => value 
 const hasStoredItems = <T,>(key: string, validator: (value: unknown) => value is T) =>
   parseStoredArray(key, validator).length > 0;
 
+type WindowWithDocumentPictureInPicture = Window & {
+  documentPictureInPicture?: DocumentPictureInPicture;
+};
+
+const getDocumentPictureInPicture = () => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  return (window as WindowWithDocumentPictureInPicture).documentPictureInPicture;
+};
+
 interface AffairsAndMissionsModalProps {
   isOpen: boolean;
   initialAffairs: AffairOption[];
@@ -248,6 +260,9 @@ function DroppableDateGroup({ date, children }: { date: string; isActiveDrop: bo
 }
 
 function App() {
+  const supportsDocumentPictureInPicture =
+    typeof getDocumentPictureInPicture()?.requestWindow === 'function';
+
   const [timers, setTimers] = useState<Timer[]>(() => {
     const saved = localStorage.getItem('timers');
     if (!saved || saved.length == 0) {
@@ -723,6 +738,11 @@ function App() {
   };
 
   const toggleWidget = async () => {
+    const documentPictureInPicture = getDocumentPictureInPicture();
+    if (!documentPictureInPicture) {
+      return;
+    }
+
     // If PiP is already open, close it
     if (documentPictureInPicture.window) {
       documentPictureInPicture.window.close();
@@ -817,7 +837,7 @@ function App() {
 
   // Sync dark mode to PiP window
   useEffect(() => {
-    const pipWindow = documentPictureInPicture?.window;
+    const pipWindow = getDocumentPictureInPicture()?.window;
     if (!pipWindow) return;
     if (isDarkMode) {
       pipWindow.document.documentElement.classList.add('dark');
@@ -831,6 +851,7 @@ function App() {
   // Cleanup PiP on unmount
   useEffect(() => {
     return () => {
+      const documentPictureInPicture = getDocumentPictureInPicture();
       if (documentPictureInPicture?.window) {
         documentPictureInPicture.window.close();
       }
@@ -1216,6 +1237,7 @@ function App() {
         showDecimalTime={showDecimalTime}
         showMilliseconds={showMilliseconds}
         showByDate={showByDate} // New property
+        supportsWidget={supportsDocumentPictureInPicture}
         showWidget={activeWidgetId !== null}
         onDeleteAll={deleteAllTimers}
         onToggleAll={toggleAllTimers}

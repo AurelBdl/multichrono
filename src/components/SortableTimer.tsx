@@ -94,7 +94,210 @@ interface VirtualSearchSelectProps {
   autoOpenOnMount?: boolean;
   isOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
+  allowOpen?: boolean;
 }
+
+interface LongPressActionButtonProps {
+  onHoldComplete: () => void;
+  className: string;
+  progressClassName: string;
+  title: string;
+  ariaLabel: string;
+  children: React.ReactNode;
+}
+
+const LONG_PRESS_DURATION_MS = 500;
+
+const LongPressActionButton = React.memo(function LongPressActionButton({
+  onHoldComplete,
+  className,
+  progressClassName,
+  title,
+  ariaLabel,
+  children,
+}: LongPressActionButtonProps) {
+  const [isPressing, setIsPressing] = useState(false);
+  const frameRef = useRef<number | null>(null);
+  const clearProgressTimeoutRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const isActiveRef = useRef(false);
+  const hasCompletedRef = useRef(false);
+  const onHoldCompleteRef = useRef(onHoldComplete);
+  const progressBarRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => { onHoldCompleteRef.current = onHoldComplete; }, [onHoldComplete]);
+
+  const blurActiveField = useCallback((currentTarget: HTMLButtonElement) => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement) || activeElement === currentTarget) {
+      return;
+    }
+
+    const tagName = activeElement.tagName;
+    const isEditableField =
+      tagName === 'INPUT' ||
+      tagName === 'TEXTAREA' ||
+      tagName === 'SELECT' ||
+      activeElement.isContentEditable;
+
+    if (isEditableField) {
+      activeElement.blur();
+    }
+  }, []);
+
+  const clearFrame = useCallback(() => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, []);
+
+  const clearProgressReset = useCallback(() => {
+    if (clearProgressTimeoutRef.current !== null) {
+      clearTimeout(clearProgressTimeoutRef.current);
+      clearProgressTimeoutRef.current = null;
+    }
+  }, []);
+
+  const setProgressDOM = useCallback((percent: number) => {
+    const el = progressBarRef.current;
+    if (!el) return;
+    el.style.width = `${percent}%`;
+    el.style.opacity = percent > 0 ? '1' : '0';
+  }, []);
+
+  const resetHold = useCallback(() => {
+    isActiveRef.current = false;
+    hasCompletedRef.current = false;
+    startTimeRef.current = null;
+    clearFrame();
+    clearProgressReset();
+    setIsPressing(false);
+    setProgressDOM(0);
+  }, [clearFrame, clearProgressReset, setProgressDOM]);
+
+  const completeHold = useCallback(() => {
+    if (hasCompletedRef.current) {
+      return;
+    }
+
+    hasCompletedRef.current = true;
+    isActiveRef.current = false;
+    startTimeRef.current = null;
+    clearFrame();
+    setIsPressing(false);
+    setProgressDOM(100);
+    onHoldCompleteRef.current();
+
+    clearProgressReset();
+    clearProgressTimeoutRef.current = window.setTimeout(() => {
+      setProgressDOM(0);
+      clearProgressTimeoutRef.current = null;
+    }, 180);
+  }, [clearFrame, clearProgressReset, setProgressDOM]);
+
+  const startHold = useCallback(() => {
+    if (isActiveRef.current) {
+      return;
+    }
+
+    clearProgressReset();
+    clearFrame();
+    isActiveRef.current = true;
+    hasCompletedRef.current = false;
+    startTimeRef.current = null;
+    setProgressDOM(0);
+    setIsPressing(true);
+
+    const animate = (timestamp: number) => {
+      if (!isActiveRef.current) {
+        return;
+      }
+
+      if (startTimeRef.current === null) {
+        startTimeRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - startTimeRef.current;
+      const nextProgress = Math.min((elapsed / LONG_PRESS_DURATION_MS) * 100, 100);
+      setProgressDOM(nextProgress);
+
+      if (elapsed >= LONG_PRESS_DURATION_MS) {
+        completeHold();
+        return;
+      }
+
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+  }, [clearFrame, clearProgressReset, setProgressDOM, completeHold]);
+
+  const cancelHold = useCallback(() => {
+    if (!isActiveRef.current || hasCompletedRef.current) {
+      return;
+    }
+
+    resetHold();
+  }, [resetHold]);
+
+  useEffect(() => () => {
+    clearFrame();
+    clearProgressReset();
+  }, [clearFrame, clearProgressReset]);
+
+  return (
+    <button
+      type="button"
+      onPointerDown={(event) => {
+        if (event.button !== 0) {
+          return;
+        }
+
+        blurActiveField(event.currentTarget);
+        event.preventDefault();
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        startHold();
+      }}
+      onPointerUp={cancelHold}
+      onPointerCancel={cancelHold}
+      onPointerLeave={(event) => {
+        if ((event.buttons & 1) === 0) {
+          cancelHold();
+        }
+      }}
+      onContextMenu={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if ((event.key === 'Enter' || event.key === ' ') && !isActiveRef.current) {
+          event.preventDefault();
+          blurActiveField(event.currentTarget);
+          startHold();
+        }
+      }}
+      onKeyUp={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          cancelHold();
+        }
+      }}
+      onBlur={cancelHold}
+      className={`relative overflow-hidden ${className}`}
+      title={title}
+      aria-label={ariaLabel}
+      data-pressing={isPressing ? 'true' : 'false'}
+    >
+      <span
+        ref={progressBarRef}
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-y-0 left-0 rounded-[inherit] ${progressClassName} transition-[width,opacity] duration-150 ease-out`}
+        style={{ width: '0%', opacity: 0 }}
+      />
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        {children}
+      </span>
+    </button>
+  );
+});
 
 const GoalModal = React.memo(function GoalModal({
   timerName,
@@ -105,7 +308,6 @@ const GoalModal = React.memo(function GoalModal({
   onConfirm,
   onClose,
 }: GoalModalProps) {
-  const [isClosing, setIsClosing] = useState(false);
   const [hours, setHours] = useState(initialHours);
   const [minutes, setMinutes] = useState(initialMinutes);
   const [seconds, setSeconds] = useState(initialSeconds);
@@ -116,8 +318,7 @@ const GoalModal = React.memo(function GoalModal({
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   const close = useCallback(() => {
-    setIsClosing(true);
-    setTimeout(() => onCloseRef.current(), 150);
+    onCloseRef.current();
   }, []);
 
   const confirm = useCallback(() => {
@@ -138,19 +339,19 @@ const GoalModal = React.memo(function GoalModal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center ${isClosing ? 'animate-out fade-out-0 duration-150' : 'animate-in fade-in-0 duration-200'}`}
+      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-150"
       onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80 ${isClosing ? 'animate-out zoom-out-95 duration-150' : 'animate-in zoom-in-95 duration-200'}`}
+        className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80 animate-in zoom-in-95 duration-150"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
             <Goal className="w-4 h-4 text-indigo-500" />
             Time goal
-            {timerName && <span className="text-gray-400 dark:text-gray-500 font-normal truncate max-w-28">— {timerName}</span>}
+            {timerName && <span className="text-gray-400 dark:text-gray-500 font-normal truncate max-w-28" title={timerName}>- {timerName}</span>}
           </h3>
           <button onClick={close} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-lg leading-none">✕</button>
         </div>
@@ -212,6 +413,9 @@ const VIRTUAL_ITEM_HEIGHT = 48;
 const VIRTUAL_MAX_HEIGHT = 240;
 const VIRTUAL_OVERSCAN = 4;
 
+const normalizeSearchText = (text: string) =>
+  text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '');
+
 const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
   label,
   placeholder,
@@ -222,6 +426,7 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
   autoOpenOnMount = false,
   isOpen: controlledIsOpen,
   onOpenChange,
+  allowOpen = true,
 }: VirtualSearchSelectProps) {
   const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -232,6 +437,7 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
+  const justClosedRef = useRef(false);
   const isOpen = controlledIsOpen ?? uncontrolledIsOpen;
 
   const setIsOpen = useCallback((nextOpen: boolean | ((prev: boolean) => boolean)) => {
@@ -243,10 +449,10 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
   }, [controlledIsOpen, isOpen, onOpenChange]);
 
   const selectedOption = options.find(option => option.id === value) ?? null;
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
   const filteredOptions = normalizedQuery.length === 0
     ? options
-    : options.filter(option => option.searchText.includes(normalizedQuery));
+    : options.filter(option => normalizeSearchText(option.searchText).includes(normalizedQuery));
 
   const totalHeight = filteredOptions.length * VIRTUAL_ITEM_HEIGHT;
   const viewportHeight = Math.min(VIRTUAL_MAX_HEIGHT, Math.max(VIRTUAL_ITEM_HEIGHT, totalHeight || VIRTUAL_ITEM_HEIGHT));
@@ -283,7 +489,7 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
   const selectOption = useCallback((option: PickerOption | null) => {
     onChange(option ? option.value : null);
     setIsOpen(false);
-  }, [onChange]);
+  }, [onChange, setIsOpen]);
 
   useEffect(() => {
     if (!autoFocus) {
@@ -303,13 +509,21 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
     }
 
     setIsOpen(true);
-  }, [autoOpenOnMount]);
+  }, [autoOpenOnMount, setIsOpen]);
+
+  useEffect(() => {
+    if (!allowOpen && isOpen) {
+      setIsOpen(false);
+    }
+  }, [allowOpen, isOpen, setIsOpen]);
 
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
       setScrollTop(0);
       setHighlightedIndex(0);
+      justClosedRef.current = true;
+      triggerButtonRef.current?.focus();
       return;
     }
 
@@ -319,13 +533,13 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
       }
     };
 
-    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('mousedown', handlePointerDown, true);
     const frameId = requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('mousedown', handlePointerDown, true);
       cancelAnimationFrame(frameId);
     };
   }, [isOpen]);
@@ -352,6 +566,11 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
       <span
         ref={labelRef}
         tabIndex={-1}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+          }
+        }}
         className="mb-1.5 block text-sm font-medium text-gray-700 outline-none dark:text-gray-200"
       >
         {label}
@@ -359,7 +578,21 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
       <button
         type="button"
         ref={triggerButtonRef}
-        onClick={() => setIsOpen(open => !open)}
+        onFocus={(event) => {
+          if (justClosedRef.current) {
+            justClosedRef.current = false;
+            return;
+          }
+          if (allowOpen && event.currentTarget.matches(':focus-visible')) {
+            setIsOpen(true);
+          }
+        }}
+        onClick={() => {
+          if (!allowOpen) {
+            return;
+          }
+          setIsOpen(open => !open);
+        }}
         className={`group flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition-all ${
           isOpen
             ? 'border-indigo-500 bg-white shadow-lg shadow-indigo-500/10 dark:border-indigo-400 dark:bg-gray-800'
@@ -409,6 +642,7 @@ const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
 
                   if (event.key === 'Escape') {
                     event.preventDefault();
+                    event.stopPropagation();
                     setIsOpen(false);
                   }
                 }}
@@ -488,7 +722,6 @@ const AffairsAndMissionsModal = React.memo(function AffairsAndMissionsModal({
   onMissionChange,
   onClose,
 }: AffairsAndMissionsModalProps) {
-  const [isClosing, setIsClosing] = useState(false);
   const [openPicker, setOpenPicker] = useState<'affair' | 'mission' | null>(null);
 
   const affairOptions: PickerOption[] = [
@@ -513,25 +746,40 @@ const AffairsAndMissionsModal = React.memo(function AffairsAndMissionsModal({
   ];
 
   const close = useCallback(() => {
-    setIsClosing(true);
-    setTimeout(() => onClose(), 150);
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+    setOpenPicker(null);
+    onClose();
   }, [onClose]);
+
+  const handleModalKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      if (openPicker !== null) {
+        setOpenPicker(null);
+      } else {
+        close();
+      }
+    }
+  }, [openPicker, close]);
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center ${isClosing ? 'animate-out fade-out-0 duration-150' : 'animate-in fade-in-0 duration-200'}`}
+      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-150"
+      onKeyDown={handleModalKeyDown}
       onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
       <div
-        className={`relative w-[26rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800 ${isClosing ? 'animate-out zoom-out-95 duration-150' : 'animate-in zoom-in-95 duration-200'}`}
+        className="relative w-[26rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 dark:border-gray-700 dark:bg-gray-800"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
           <h3 className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
             <BriefcaseBusiness className="w-4 h-4 text-indigo-500" />
             Affair and mission
-            {timerName && <span className="text-gray-400 dark:text-gray-500 font-normal truncate max-w-28">— {timerName}</span>}
+            {timerName && <span className="text-gray-400 dark:text-gray-500 font-normal truncate max-w-28" title={timerName}>- {timerName}</span>}
           </h3>
           <button onClick={close} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-lg leading-none">✕</button>
         </div>
@@ -546,6 +794,7 @@ const AffairsAndMissionsModal = React.memo(function AffairsAndMissionsModal({
             autoFocus
             isOpen={openPicker === 'affair'}
             onOpenChange={(isOpen) => setOpenPicker(isOpen ? 'affair' : null)}
+            allowOpen
           />
 
           <VirtualSearchSelect
@@ -556,15 +805,16 @@ const AffairsAndMissionsModal = React.memo(function AffairsAndMissionsModal({
             onChange={onMissionChange}
             isOpen={openPicker === 'mission'}
             onOpenChange={(isOpen) => setOpenPicker(isOpen ? 'mission' : null)}
+            allowOpen
           />
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex">
           <button
             onClick={close}
-            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+            className="rounded-xl w-full bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
           >
-            Done
+            Confirm
           </button>
         </div>
       </div>
@@ -1006,15 +1256,17 @@ function SortableTimer({
                 )}
               </>
             )}
-            <button
-              onClick={() => onReset(timer.id)}
+            <LongPressActionButton
+              onHoldComplete={() => onReset(timer.id)}
               className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Reset timer"
+              progressClassName="bg-gray-200 dark:bg-gray-600"
+              title="Hold for 1.5 seconds to reset timer"
+              ariaLabel={`Hold for 1.5 seconds to reset ${timer.name || 'timer'}`}
             >
               <RefreshCw className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => {
+            </LongPressActionButton>
+            <LongPressActionButton
+              onHoldComplete={() => {
                 const element = document.getElementById(`timer-${timer.id}`);
                 if (element) {
                   element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
@@ -1024,10 +1276,12 @@ function SortableTimer({
                 }
               }}
               className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-              title="Delete timer"
+              progressClassName="bg-red-200 dark:bg-red-800/80"
+              title="Hold for 1.5 seconds to delete timer"
+              ariaLabel={`Hold for 1.5 seconds to delete ${timer.name || 'timer'}`}
             >
               <Trash2 className="w-5 h-5" />
-            </button>
+            </LongPressActionButton>
           </div>
         </div>
       </div>

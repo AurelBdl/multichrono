@@ -517,6 +517,9 @@ function App() {
     });
   };
 
+  const addTimerRef = useRef(addTimer);
+  useEffect(() => { addTimerRef.current = addTimer; });
+
   const deleteAllTimers = () => {
     timers.forEach(timer => {
       const element = document.getElementById(`timer-${timer.id}`);
@@ -1009,6 +1012,10 @@ function App() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key === 'v' && !isEditableElement(document.activeElement)) {
         handlePaste();
+      }
+      if (event.altKey && event.key === 'n' && !document.querySelector('.fixed.inset-0.z-50')) {
+        event.preventDefault();
+        addTimerRef.current({});
       }
     };
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture, Goal } from 'lucide-react';
+import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture, Goal, BriefcaseBusiness } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 import { CSSTransition } from 'react-transition-group';
 
@@ -13,6 +13,8 @@ interface HeaderProps {
   showByDate: boolean; // New property
   showWidget: boolean;
   showGoals: boolean;
+  showAffairsAndMissions: boolean;
+  currentStickyDate?: string | null;
   onDeleteAll: () => void;
   onToggleAll: () => void;
   onAddTimer: () => void;
@@ -27,6 +29,7 @@ interface HeaderProps {
   onToggleByDate: () => void; // New method
   onToggleWidget: () => void; // New method
   onToggleGoals: () => void;
+  onToggleAffairsAndMissions: () => void;
 }
 
 function SettingsDropdown({
@@ -41,6 +44,7 @@ function SettingsDropdown({
   showByDate, // New property
   showWidget,
   showGoals,
+  showAffairsAndMissions,
   onToggleSimpleMode,
   onToggleCheckingMode,
   onToggleDecimalTime,
@@ -51,6 +55,7 @@ function SettingsDropdown({
   onToggleByDate, // New method
   onToggleWidget, // New method
   onToggleGoals,
+  onToggleAffairsAndMissions,
 }: {
   timers: any[];
   isOpen: boolean;
@@ -63,6 +68,7 @@ function SettingsDropdown({
   showByDate: boolean; // New property
   showWidget: boolean;
   showGoals: boolean;
+  showAffairsAndMissions: boolean;
   onToggleSimpleMode: () => void;
   onToggleCheckingMode: () => void;
   onToggleDecimalTime: () => void;
@@ -73,6 +79,7 @@ function SettingsDropdown({
   onToggleByDate: () => void; // New method
   onToggleWidget: () => void; // New method
   onToggleGoals: () => void;
+  onToggleAffairsAndMissions: () => void;
 }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +121,13 @@ function SettingsDropdown({
           {showGoals ? 'Disable' : 'Enable'} time goals
         </button>
         {/* } */}
+        <button
+          onClick={() => onToggleAffairsAndMissions()}
+          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+        >
+          <BriefcaseBusiness className="w-4 h-4" />
+          {showAffairsAndMissions ? 'Disable' : 'Enable'} Affairs and Missions
+        </button>
         <button
           onClick={() => onToggleSimpleMode()}
           className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
@@ -175,6 +189,7 @@ export default function Header({
   showByDate, // New property
   showWidget,
   showGoals,
+  showAffairsAndMissions,
   onDeleteAll,
   onToggleAll,
   onAddTimer,
@@ -189,6 +204,7 @@ export default function Header({
   onToggleByDate, // New method
   onToggleWidget, // New method
   onToggleGoals,
+  onToggleAffairsAndMissions,
   currentStickyDate,
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -305,6 +321,7 @@ export default function Header({
                 showByDate={showByDate} // New property
                 showWidget={showWidget}
                 showGoals={showGoals}
+                showAffairsAndMissions={showAffairsAndMissions}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleCheckingMode={onToggleCheckingMode}
                 onToggleDecimalTime={onToggleDecimalTime}
@@ -315,6 +332,7 @@ export default function Header({
                 onToggleByDate={onToggleByDate} // New method
                 onToggleWidget={onToggleWidget}
                 onToggleGoals={onToggleGoals}
+                onToggleAffairsAndMissions={onToggleAffairsAndMissions}
               />
               </div>
             </div>
@@ -388,6 +406,7 @@ export default function Header({
                 showByDate={showByDate} // New property
                 showWidget={showWidget}
                 showGoals={showGoals}
+                showAffairsAndMissions={showAffairsAndMissions}
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleCheckingMode={onToggleCheckingMode}
                 onToggleDecimalTime={onToggleDecimalTime}
@@ -398,6 +417,7 @@ export default function Header({
                 onToggleByDate={onToggleByDate} // New method
                 onToggleWidget={onToggleWidget}
                 onToggleGoals={onToggleGoals}
+                onToggleAffairsAndMissions={onToggleAffairsAndMissions}
               />
             </div>
           </div>

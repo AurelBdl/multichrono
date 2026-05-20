@@ -26,7 +26,7 @@ import { FloatingButton, FloatingButtonItem } from './ui/FloatingButton';
 import ConfirmDeleteButton from './ui/ConfirmDeleteButton';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import SortableTimer, { Timer } from './components/SortableTimer';
+import SortableTimer, { Timer, AffairOption, MissionOption } from './components/SortableTimer';
 import PipTimerWidget from './components/PipTimerWidget';
 
 const blurAllInputs = () => {
@@ -35,6 +35,208 @@ const blurAllInputs = () => {
     input.blur();
   });
 };
+
+const isEditableElement = (element: Element | null) => {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    element.tagName === 'INPUT' ||
+    element.tagName === 'TEXTAREA' ||
+    element.isContentEditable
+  );
+};
+
+const isAffairOption = (value: unknown): value is AffairOption => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const affair = value as Record<string, unknown>;
+  return (
+    (typeof affair.id === 'string' || typeof affair.id === 'number') &&
+    (typeof affair.code === 'string' || affair.code === null) &&
+    typeof affair.name === 'string'
+  );
+};
+
+const isMissionOption = (value: unknown): value is MissionOption => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const mission = value as Record<string, unknown>;
+  return (
+    (typeof mission.id === 'string' || typeof mission.id === 'number') &&
+    (
+      typeof mission.affairId === 'string' ||
+      typeof mission.affairId === 'number' ||
+      mission.affairId === null
+    ) &&
+    typeof mission.label === 'string'
+  );
+};
+
+const parseStoredArray = <T,>(key: string, validator: (value: unknown) => value is T): T[] => {
+  const saved = localStorage.getItem(key);
+  if (!saved) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed.filter(validator) : [];
+  } catch {
+    return [];
+  }
+};
+
+const hasStoredItems = <T,>(key: string, validator: (value: unknown) => value is T) =>
+  parseStoredArray(key, validator).length > 0;
+
+interface AffairsAndMissionsModalProps {
+  isOpen: boolean;
+  initialAffairs: AffairOption[];
+  initialMissions: MissionOption[];
+  onClose: () => void;
+  onSave: (payload: { affairsList: AffairOption[]; missionsList: MissionOption[] }) => void;
+}
+
+function AffairsAndMissionsModal({
+  isOpen,
+  initialAffairs,
+  initialMissions,
+  onClose,
+  onSave,
+}: AffairsAndMissionsModalProps) {
+  const [affairsValue, setAffairsValue] = useState('[]');
+  const [missionsValue, setMissionsValue] = useState('[]');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    setAffairsValue(JSON.stringify(initialAffairs, null, 2));
+    setMissionsValue(JSON.stringify(initialMissions, null, 2));
+    setError(null);
+  }, [initialAffairs, initialMissions, isOpen]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleSave = () => {
+    try {
+      const parsedAffairs = JSON.parse(affairsValue);
+      const parsedMissions = JSON.parse(missionsValue);
+
+      if (!Array.isArray(parsedAffairs) || !Array.isArray(parsedMissions)) {
+        setError('Each field must contain a valid JSON array.');
+        return;
+      }
+
+      if (parsedAffairs.length === 0 || parsedMissions.length === 0) {
+        setError('Both arrays must contain at least one item.');
+        return;
+      }
+
+      if (!parsedAffairs.every(isAffairOption)) {
+        setError('Each affair must contain at least id, code and name. code may be null.');
+        return;
+      }
+
+      if (!parsedMissions.every(isMissionOption)) {
+        setError('Each mission must contain at least id, affairId and label.');
+        return;
+      }
+
+      const affairIds = new Set(parsedAffairs.map(affair => String(affair.id)));
+      const hasInvalidMissionLink = parsedMissions.some(mission =>
+        mission.affairId !== '' &&
+        mission.affairId !== null &&
+        !affairIds.has(String(mission.affairId))
+      );
+      if (hasInvalidMissionLink) {
+        setError('Each non-empty mission.affairId must match an existing affair id.');
+        return;
+      }
+
+      onSave({
+        affairsList: parsedAffairs,
+        missionsList: parsedMissions,
+      });
+    } catch {
+      setError('Please enter valid JSON for both arrays.');
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+      <div
+        className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Toggle Affairs and Missions</h2>
+          {/* <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Fill in both arrays with valid JSON objects. Affairs need <code>id</code>, <code>code</code>, <code>name</code>; <code>code</code> may be <code>null</code> or an empty string, and <code>name</code> may be an empty string. Missions need <code>id</code>, <code>affairId</code>, <code>label</code>, and <code>affairId</code> may be <code>null</code> or an empty string.
+          </p> */}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">affairsList</span>
+            <textarea
+              value={affairsValue}
+              onChange={(event) => setAffairsValue(event.target.value)}
+              className="h-56 w-full rounded-xl border border-gray-300 bg-gray-50 p-3 font-mono text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">missionsList</span>
+            <textarea
+              value={missionsValue}
+              onChange={(event) => setMissionsValue(event.target.value)}
+              className="h-56 w-full rounded-xl border border-gray-300 bg-gray-50 p-3 font-mono text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+            />
+          </label>
+        </div>
+
+        {error && (
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 function DroppableDateGroup({ date, children }: { date: string; isActiveDrop: boolean; children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id: `date-${date}` });
@@ -109,6 +311,15 @@ function App() {
     const saved = localStorage.getItem('showGoals');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showAffairsAndMissions, setShowAffairsAndMissions] = useState(() => {
+    const saved = localStorage.getItem('showAffairsAndMissions');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [showAffairsAndMissionsModal, setShowAffairsAndMissionsModal] = useState(false);
+  const [affairsList, setAffairsList] = useState<AffairOption[]>(() => parseStoredArray('affairsList', isAffairOption));
+  const [missionsList, setMissionsList] = useState<MissionOption[]>(() => parseStoredArray('missionsList', isMissionOption));
+  const [modalInitialAffairs, setModalInitialAffairs] = useState<AffairOption[]>([]);
+  const [modalInitialMissions, setModalInitialMissions] = useState<MissionOption[]>([]);
   const [pendingNameFocusTimerId, setPendingNameFocusTimerId] = useState<string | null>(null);
   const [currentStickyDate, setCurrentStickyDate] = useState<string | null>(null);
 
@@ -141,6 +352,28 @@ function App() {
   useEffect(() => {
     localStorage.setItem('showGoals', JSON.stringify(showGoals));
   }, [showGoals]);
+
+  useEffect(() => {
+    localStorage.setItem('showAffairsAndMissions', JSON.stringify(showAffairsAndMissions));
+  }, [showAffairsAndMissions]);
+
+  useEffect(() => {
+    if (!showAffairsAndMissions) {
+      setShowAffairsAndMissionsModal(false);
+      return;
+    }
+
+    if (
+      hasStoredItems('affairsList', isAffairOption) &&
+      hasStoredItems('missionsList', isMissionOption)
+    ) {
+      return;
+    }
+
+    setModalInitialAffairs(parseStoredArray('affairsList', isAffairOption));
+    setModalInitialMissions(parseStoredArray('missionsList', isMissionOption));
+    setShowAffairsAndMissionsModal(true);
+  }, [showAffairsAndMissions]);
 
   // Detect which date group header is at the top of the viewport (behind sticky header)
   useEffect(() => {
@@ -436,6 +669,26 @@ function App() {
     });
   };
 
+  const updateTimerAffair = (id: string, affairId: string | number | null) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, affairId } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  };
+
+  const updateTimerMission = (id: string, missionId: string | number | null) => {
+    setTimers(prev => {
+      const newTimers = prev.map(timer =>
+        timer.id === id ? { ...timer, missionId } : timer
+      );
+      localStorage.setItem('timers', JSON.stringify(newTimers));
+      return newTimers;
+    });
+  };
+
   const updateTimerDate = (id: string, newDate: string) => {
     setTimers(prev => {
       const newTimers = prev.map(timer => {
@@ -530,6 +783,33 @@ function App() {
       console.error('Error opening Document PiP:', error);
       setActiveWidgetId(null);
     }
+  };
+
+  const handleToggleAffairsAndMissions = () => {
+    setShowAffairsAndMissions(prev => !prev);
+  };
+
+  const handleCloseAffairsAndMissionsModal = () => {
+    setShowAffairsAndMissionsModal(false);
+
+    if (!hasStoredItems('affairsList', isAffairOption) || !hasStoredItems('missionsList', isMissionOption)) {
+      setShowAffairsAndMissions(false);
+    }
+  };
+
+  const handleSaveAffairsAndMissions = ({
+    affairsList,
+    missionsList,
+  }: {
+    affairsList: AffairOption[];
+    missionsList: MissionOption[];
+  }) => {
+    localStorage.setItem('affairsList', JSON.stringify(affairsList));
+    localStorage.setItem('missionsList', JSON.stringify(missionsList));
+    setAffairsList(affairsList);
+    setMissionsList(missionsList);
+    setShowAffairsAndMissions(true);
+    setShowAffairsAndMissionsModal(false);
   };
 
   // Sync dark mode to PiP window
@@ -727,7 +1007,7 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === 'v' && document.activeElement?.tagName !== 'INPUT') {
+      if (event.ctrlKey && event.key === 'v' && !isEditableElement(document.activeElement)) {
         handlePaste();
       }
     };
@@ -802,7 +1082,9 @@ function App() {
         return {
           ...timer,
           id: crypto.randomUUID(),
-          isChecked: typeof timer.isChecked === 'boolean' ? timer.isChecked : false
+          isChecked: typeof timer.isChecked === 'boolean' ? timer.isChecked : false,
+          affairId: typeof timer.affairId === 'string' || typeof timer.affairId === 'number' ? timer.affairId : null,
+          missionId: typeof timer.missionId === 'string' || typeof timer.missionId === 'number' ? timer.missionId : null,
         };
       });
       setTimers(prev => {
@@ -943,7 +1225,17 @@ function App() {
         onToggleWidget={() => toggleWidget()} // New method
         showGoals={showGoals}
         onToggleGoals={() => setShowGoals(prev => !prev)}
+        showAffairsAndMissions={showAffairsAndMissions}
+        onToggleAffairsAndMissions={handleToggleAffairsAndMissions}
         currentStickyDate={currentStickyDate}
+      />
+
+      <AffairsAndMissionsModal
+        isOpen={showAffairsAndMissionsModal}
+        initialAffairs={modalInitialAffairs}
+        initialMissions={modalInitialMissions}
+        onClose={handleCloseAffairsAndMissionsModal}
+        onSave={handleSaveAffairsAndMissions}
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 flex-1 w-full">
@@ -1023,10 +1315,15 @@ function App() {
                             onMinuteChange={updateTimerMinute}
                             onSecondChange={updateTimerSecond}
                             onGoalChange={updateTimerGoal}
+                            onAffairChange={updateTimerAffair}
+                            onMissionChange={updateTimerMission}
                             formatTime={formatTime}
                             showMilliseconds={showMilliseconds}
                             showDecimalTime={showDecimalTime}
                             showGoals={showGoals}
+                            showAffairsAndMissions={showAffairsAndMissions}
+                            affairsList={affairsList}
+                            missionsList={missionsList}
                           />
                         </div>
                       ))}
@@ -1058,10 +1355,15 @@ function App() {
                       onMinuteChange={updateTimerMinute}
                       onSecondChange={updateTimerSecond}
                       onGoalChange={updateTimerGoal}
+                      onAffairChange={updateTimerAffair}
+                      onMissionChange={updateTimerMission}
                       formatTime={formatTime}
                       showMilliseconds={showMilliseconds}
                       showDecimalTime={showDecimalTime}
                       showGoals={showGoals}
+                      showAffairsAndMissions={showAffairsAndMissions}
+                      affairsList={affairsList}
+                      missionsList={missionsList}
                     />
                   </div>
                 ))}

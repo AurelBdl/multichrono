@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Pause, RefreshCw, Trash2, GripVertical, Check, Goal } from 'lucide-react';
+import { Play, Pause, RefreshCw, Trash2, GripVertical, Check, Goal, BriefcaseBusiness, Search, ChevronDown, X } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -14,6 +14,20 @@ export interface Timer {
   isChecked: boolean;
   hasBeenRendered?: boolean;
   goalTime?: number | null;
+  affairId?: string | number | null;
+  missionId?: string | number | null;
+}
+
+export interface AffairOption {
+  id: string | number;
+  code: string | null;
+  name: string;
+}
+
+export interface MissionOption {
+  id: string | number;
+  affairId: string | number | null;
+  label: string;
 }
 
 export interface SortableTimerProps {
@@ -33,6 +47,11 @@ export interface SortableTimerProps {
   showDecimalTime: boolean;
   showGoals: boolean;
   isCheckingMode: boolean;
+  showAffairsAndMissions: boolean;
+  affairsList: AffairOption[];
+  missionsList: MissionOption[];
+  onAffairChange: (id: string, affairId: string | number | null) => void;
+  onMissionChange: (id: string, missionId: string | number | null) => void;
   shouldAutoFocusName?: boolean;
   onNameFocusHandled?: () => void;
 }
@@ -45,6 +64,36 @@ interface GoalModalProps {
   hasExistingGoal: boolean;
   onConfirm: (ms: number | null) => void;
   onClose: () => void;
+}
+
+interface AffairsAndMissionsModalProps {
+  timerName: string;
+  affairsList: AffairOption[];
+  missionsList: MissionOption[];
+  selectedAffairId: string;
+  selectedMissionId: string;
+  onAffairChange: (affairId: string | number | null) => void;
+  onMissionChange: (missionId: string | number | null) => void;
+  onClose: () => void;
+}
+
+interface PickerOption {
+  id: string;
+  value: string | number | null;
+  label: string;
+  searchText: string;
+}
+
+interface VirtualSearchSelectProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: PickerOption[];
+  onChange: (value: string | number | null) => void;
+  autoFocus?: boolean;
+  autoOpenOnMount?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 const GoalModal = React.memo(function GoalModal({
@@ -159,6 +208,371 @@ const GoalModal = React.memo(function GoalModal({
   );
 });
 
+const VIRTUAL_ITEM_HEIGHT = 48;
+const VIRTUAL_MAX_HEIGHT = 240;
+const VIRTUAL_OVERSCAN = 4;
+
+const VirtualSearchSelect = React.memo(function VirtualSearchSelect({
+  label,
+  placeholder,
+  value,
+  options,
+  onChange,
+  autoFocus = false,
+  autoOpenOnMount = false,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+}: VirtualSearchSelectProps) {
+  const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [scrollTop, setScrollTop] = useState(0);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
+  const isOpen = controlledIsOpen ?? uncontrolledIsOpen;
+
+  const setIsOpen = useCallback((nextOpen: boolean | ((prev: boolean) => boolean)) => {
+    const resolvedOpen = typeof nextOpen === 'function' ? nextOpen(isOpen) : nextOpen;
+    if (controlledIsOpen === undefined) {
+      setUncontrolledIsOpen(resolvedOpen);
+    }
+    onOpenChange?.(resolvedOpen);
+  }, [controlledIsOpen, isOpen, onOpenChange]);
+
+  const selectedOption = options.find(option => option.id === value) ?? null;
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = normalizedQuery.length === 0
+    ? options
+    : options.filter(option => option.searchText.includes(normalizedQuery));
+
+  const totalHeight = filteredOptions.length * VIRTUAL_ITEM_HEIGHT;
+  const viewportHeight = Math.min(VIRTUAL_MAX_HEIGHT, Math.max(VIRTUAL_ITEM_HEIGHT, totalHeight || VIRTUAL_ITEM_HEIGHT));
+  const startIndex = Math.max(0, Math.floor(scrollTop / VIRTUAL_ITEM_HEIGHT) - VIRTUAL_OVERSCAN);
+  const visibleCount = Math.ceil(viewportHeight / VIRTUAL_ITEM_HEIGHT) + VIRTUAL_OVERSCAN * 2;
+  const endIndex = Math.min(filteredOptions.length, startIndex + visibleCount);
+  const visibleOptions = filteredOptions.slice(startIndex, endIndex);
+  const offsetY = startIndex * VIRTUAL_ITEM_HEIGHT;
+
+  const scrollOptionIntoView = useCallback((index: number) => {
+    const listElement = listRef.current;
+    if (!listElement) {
+      return;
+    }
+
+    const optionTop = index * VIRTUAL_ITEM_HEIGHT;
+    const optionBottom = optionTop + VIRTUAL_ITEM_HEIGHT;
+    const viewportTop = listElement.scrollTop;
+    const viewportBottom = viewportTop + listElement.clientHeight;
+
+    if (optionTop < viewportTop) {
+      listElement.scrollTop = optionTop;
+      setScrollTop(optionTop);
+      return;
+    }
+
+    if (optionBottom > viewportBottom) {
+      const nextScrollTop = optionBottom - listElement.clientHeight;
+      listElement.scrollTop = nextScrollTop;
+      setScrollTop(nextScrollTop);
+    }
+  }, []);
+
+  const selectOption = useCallback((option: PickerOption | null) => {
+    onChange(option ? option.value : null);
+    setIsOpen(false);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      labelRef.current?.focus();
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [autoFocus]);
+
+  useEffect(() => {
+    if (!autoOpenOnMount) {
+      return;
+    }
+
+    setIsOpen(true);
+  }, [autoOpenOnMount]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery('');
+      setScrollTop(0);
+      setHighlightedIndex(0);
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    const frameId = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      cancelAnimationFrame(frameId);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(0);
+      return;
+    }
+
+    setHighlightedIndex(current => Math.min(current, filteredOptions.length - 1));
+  }, [filteredOptions]);
+
+  useEffect(() => {
+    if (!isOpen || filteredOptions.length === 0) {
+      return;
+    }
+
+    scrollOptionIntoView(highlightedIndex);
+  }, [filteredOptions.length, highlightedIndex, isOpen, scrollOptionIntoView]);
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <span
+        ref={labelRef}
+        tabIndex={-1}
+        className="mb-1.5 block text-sm font-medium text-gray-700 outline-none dark:text-gray-200"
+      >
+        {label}
+      </span>
+      <button
+        type="button"
+        ref={triggerButtonRef}
+        onClick={() => setIsOpen(open => !open)}
+        className={`group flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition-all ${
+          isOpen
+            ? 'border-indigo-500 bg-white shadow-lg shadow-indigo-500/10 dark:border-indigo-400 dark:bg-gray-800'
+            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-white dark:border-gray-600 dark:bg-gray-700/60 dark:hover:bg-gray-700'
+        }`}
+      >
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-gray-800 dark:text-white">
+            {selectedOption ? selectedOption.label : placeholder}
+          </div>
+          <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            {selectedOption ? 'Selected' : `${options.length} items available`}
+          </div>
+        </div>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-black/10 dark:border-gray-600 dark:bg-gray-800">
+          <div className="border-b border-gray-100 p-3 dark:border-gray-700">
+            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-900/70">
+              <Search className="h-4 w-4 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setHighlightedIndex(current => Math.min(current + 1, Math.max(filteredOptions.length - 1, 0)));
+                    return;
+                  }
+
+                  if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setHighlightedIndex(current => Math.max(current - 1, 0));
+                    return;
+                  }
+
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (filteredOptions.length > 0) {
+                      selectOption(filteredOptions[highlightedIndex] ?? null);
+                    }
+                    return;
+                  }
+
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    setIsOpen(false);
+                  }
+                }}
+                placeholder={`Search ${label.toLowerCase()}...`}
+                className="w-full bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div
+            ref={listRef}
+            className="overflow-y-auto"
+            style={{ height: `${viewportHeight}px` }}
+            onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+          >
+            {filteredOptions.length === 0 ? (
+              <div className="flex h-full min-h-28 items-center justify-center px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                No results for this search.
+              </div>
+            ) : (
+              <div style={{ height: `${totalHeight}px`, position: 'relative' }}>
+                <div style={{ transform: `translateY(${offsetY}px)` }}>
+                  {visibleOptions.map((option, visibleIndex) => {
+                    const isSelected = option.id === value;
+                    const actualIndex = startIndex + visibleIndex;
+                    const isHighlighted = actualIndex === highlightedIndex;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onMouseEnter={() => setHighlightedIndex(actualIndex)}
+                        onClick={() => selectOption(option)}
+                        className={`flex h-12 w-full items-center px-4 text-left text-sm transition-colors ${
+                          isSelected
+                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'
+                            : isHighlighted
+                              ? 'bg-gray-100 text-gray-900 dark:bg-gray-700/70 dark:text-white'
+                              : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/60'
+                        }`}
+                      >
+                        <span className="truncate">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2 dark:border-gray-700">
+            <span className="text-xs text-gray-400 dark:text-gray-500">{filteredOptions.length} result{filteredOptions.length > 1 ? 's' : ''}</span>
+            <button
+              type="button"
+              onClick={() => {
+                selectOption(null);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const AffairsAndMissionsModal = React.memo(function AffairsAndMissionsModal({
+  timerName,
+  affairsList,
+  missionsList,
+  selectedAffairId,
+  selectedMissionId,
+  onAffairChange,
+  onMissionChange,
+  onClose,
+}: AffairsAndMissionsModalProps) {
+  const [isClosing, setIsClosing] = useState(false);
+  const [openPicker, setOpenPicker] = useState<'affair' | 'mission' | null>(null);
+
+  const affairOptions: PickerOption[] = [
+    ...affairsList.map(affair => {
+      const label = affair.code ? `${affair.code} - ${affair.name}` : affair.name;
+      return {
+        id: String(affair.id),
+        value: affair.id,
+        label,
+        searchText: `${affair.code ?? ''} ${affair.name}`.toLowerCase(),
+      };
+    }),
+  ];
+
+  const missionOptions: PickerOption[] = [
+    ...missionsList.map(mission => ({
+      id: String(mission.id),
+      value: mission.id,
+      label: mission.label,
+      searchText: mission.label.toLowerCase(),
+    })),
+  ];
+
+  const close = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => onClose(), 150);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center ${isClosing ? 'animate-out fade-out-0 duration-150' : 'animate-in fade-in-0 duration-200'}`}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}
+    >
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
+      <div
+        className={`relative w-[26rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800 ${isClosing ? 'animate-out zoom-out-95 duration-150' : 'animate-in zoom-in-95 duration-200'}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+            <BriefcaseBusiness className="w-4 h-4 text-indigo-500" />
+            Affair and mission
+            {timerName && <span className="text-gray-400 dark:text-gray-500 font-normal truncate max-w-28">— {timerName}</span>}
+          </h3>
+          <button onClick={close} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-lg leading-none">✕</button>
+        </div>
+
+        <div className="space-y-4">
+          <VirtualSearchSelect
+            label="Affair"
+            placeholder="Choose an affair"
+            value={selectedAffairId}
+            options={affairOptions}
+            onChange={onAffairChange}
+            autoFocus
+            isOpen={openPicker === 'affair'}
+            onOpenChange={(isOpen) => setOpenPicker(isOpen ? 'affair' : null)}
+          />
+
+          <VirtualSearchSelect
+            label="Mission"
+            placeholder="Choose a mission"
+            value={selectedMissionId}
+            options={missionOptions}
+            onChange={onMissionChange}
+            isOpen={openPicker === 'mission'}
+            onOpenChange={(isOpen) => setOpenPicker(isOpen ? 'mission' : null)}
+          />
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={close}
+            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+});
+
 function SortableTimer({
   timer,
   onToggle,
@@ -176,6 +590,11 @@ function SortableTimer({
   showDecimalTime,
   showGoals,
   isCheckingMode,
+  showAffairsAndMissions,
+  affairsList,
+  missionsList,
+  onAffairChange,
+  onMissionChange,
   shouldAutoFocusName,
   onNameFocusHandled,
 }: SortableTimerProps) {
@@ -192,6 +611,7 @@ function SortableTimer({
   const [isMinuteEditing, setIsMinuteEditing] = useState(false);
   const [isSecondEditing, setIsSecondEditing] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showAffairsAndMissionsModal, setShowAffairsAndMissionsModal] = useState(false);
   const [goalInitial, setGoalInitial] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const hasNotifiedRef = useRef(false);
   const onGoalChangeRef = useRef(onGoalChange);
@@ -311,6 +731,8 @@ function SortableTimer({
   const goalProgressRaw = timer.goalTime ? (effectiveTime / timer.goalTime) * 100 : 0;
   const goalProgress = Math.min(100, goalProgressRaw);
   const goalReached = timer.goalTime ? effectiveTime >= timer.goalTime : false;
+  const selectedAffairId = timer.affairId == null ? '' : String(timer.affairId);
+  const selectedMissionId = timer.missionId == null ? '' : String(timer.missionId);
 
   const convertToDecimalTime = ({ hour, minutes }: { hour: number; minutes: number }) => {
     if (typeof hour !== 'number' || typeof minutes !== 'number') {
@@ -555,6 +977,35 @@ function SortableTimer({
                 )}
               </>
             )}
+            {showAffairsAndMissions && (
+              <>
+                <button
+                  onClick={() => setShowAffairsAndMissionsModal(true)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    timer.affairId != null && timer.missionId != null
+                      ? 'text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      : timer.affairId != null || timer.missionId != null
+                        ? 'text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                  title="Set affair and mission"
+                >
+                  <BriefcaseBusiness className="w-5 h-5" />
+                </button>
+                {showAffairsAndMissionsModal && (
+                  <AffairsAndMissionsModal
+                    timerName={timer.name}
+                    affairsList={affairsList}
+                    missionsList={missionsList}
+                    selectedAffairId={selectedAffairId}
+                    selectedMissionId={selectedMissionId}
+                    onAffairChange={(affairId) => onAffairChange(timer.id, affairId)}
+                    onMissionChange={(missionId) => onMissionChange(timer.id, missionId)}
+                    onClose={() => setShowAffairsAndMissionsModal(false)}
+                  />
+                )}
+              </>
+            )}
             <button
               onClick={() => onReset(timer.id)}
               className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -655,10 +1106,15 @@ export default React.memo(SortableTimer, (prev, next) =>
   prev.timer.name === next.timer.name &&
   prev.timer.isChecked === next.timer.isChecked &&
   prev.timer.goalTime === next.timer.goalTime &&
+  prev.timer.affairId === next.timer.affairId &&
+  prev.timer.missionId === next.timer.missionId &&
   prev.timer.hasBeenRendered === next.timer.hasBeenRendered &&
   prev.showMilliseconds === next.showMilliseconds &&
   prev.showDecimalTime === next.showDecimalTime &&
   prev.showGoals === next.showGoals &&
   prev.isCheckingMode === next.isCheckingMode &&
+  prev.showAffairsAndMissions === next.showAffairsAndMissions &&
+  prev.affairsList === next.affairsList &&
+  prev.missionsList === next.missionsList &&
   prev.shouldAutoFocusName === next.shouldAutoFocusName
 );

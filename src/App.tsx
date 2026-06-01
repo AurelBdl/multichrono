@@ -535,17 +535,42 @@ function App() {
   const addTimerRef = useRef(addTimer);
   useEffect(() => { addTimerRef.current = addTimer; });
 
+  const selectedTimerCount = timers.filter(timer => timer.isChecked).length;
+  const deleteConfirmLabel = selectedTimerCount > 0 ? `selected (${selectedTimerCount})` : 'All';
+
   const deleteAllTimers = () => {
-    timers.forEach(timer => {
+    const shouldDeleteSelectedOnly = selectedTimerCount > 0;
+    const timersToDelete = timers.filter(timer => shouldDeleteSelectedOnly ? timer.isChecked : true);
+    const hasAnimatedElement = timersToDelete.some(timer => {
       const element = document.getElementById(`timer-${timer.id}`);
       if (element) {
         element.classList.add('animate-out', 'fade-out-0', 'zoom-out', 'duration-300');
-        setTimeout(() => { setTimers([]); localStorage.removeItem('timers') }, 300);
-      } else {
-        setTimers([]);
-        localStorage.removeItem('timers');
+        return true;
       }
+      return false;
     });
+
+    const deleteTimers = () => {
+      setTimers(prev => {
+        const newTimers = shouldDeleteSelectedOnly
+          ? prev.filter(timer => !timer.isChecked)
+          : [];
+
+        if (newTimers.length === 0) {
+          localStorage.removeItem('timers');
+        } else {
+          localStorage.setItem('timers', JSON.stringify(newTimers));
+        }
+
+        return newTimers;
+      });
+    };
+
+    if (hasAnimatedElement) {
+      setTimeout(deleteTimers, 300);
+    } else {
+      deleteTimers();
+    }
   }
 
   const toggleTimer = (id: string) => {
@@ -1183,7 +1208,7 @@ function App() {
         }>
         {timers.length > 0 && (
           <FloatingButtonItem key="deleteAll">
-            <ConfirmDeleteButton onDelete={deleteAllTimers} rounded />
+            <ConfirmDeleteButton onDelete={deleteAllTimers} rounded confirmLabel={deleteConfirmLabel} />
           </FloatingButtonItem>
         )}
         {timers.length > 0 && !isSimpleMode && (

@@ -219,6 +219,8 @@ export default function Header({
   const [displayedDate, setDisplayedDate] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'up' | 'down'>('up');
+  const checkedTimersCount = timers.filter(timer => timer.isChecked).length;
+  const deleteConfirmLabel = checkedTimersCount > 0 ? `selected (${checkedTimersCount})` : 'All';
 
   const formattedStickyDate = useMemo(() => {
     if (!currentStickyDate) return null;
@@ -361,7 +363,7 @@ export default function Header({
               </div>
             )}
             {timers.length > 0 && (
-              <ConfirmDeleteButton onDelete={onDeleteAll} />
+              <ConfirmDeleteButton onDelete={onDeleteAll} confirmLabel={deleteConfirmLabel} />
             )}
             {timers.length > 0 && !isSimpleMode && (
               <button

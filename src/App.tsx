@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Pause, GripVertical, Plus, ArrowBigUpDash, Check } from 'lucide-react';
+import { Play, Pause, GripVertical, Plus, ArrowBigUpDash, Check, CalendarClock } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
 import {
   DndContext,
@@ -259,6 +259,116 @@ function DroppableDateGroup({ date, children }: { date: string; isActiveDrop: bo
   );
 }
 
+interface AddTimerDateModalProps {
+  isOpen: boolean;
+  initialDate: Date;
+  onClose: () => void;
+  onConfirm: (date: Date) => void;
+}
+
+const formatDateInputValue = (dateValue: Date) => {
+  const year = dateValue.getFullYear();
+  const month = (dateValue.getMonth() + 1).toString().padStart(2, '0');
+  const day = dateValue.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateInputValue = (dateValue: string) => {
+  const [year, month, day] = dateValue.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+function AddTimerDateModal({
+  isOpen,
+  initialDate,
+  onClose,
+  onConfirm,
+}: AddTimerDateModalProps) {
+  const [selectedDate, setSelectedDate] = useState(formatDateInputValue(initialDate));
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedDate(formatDateInputValue(initialDate));
+    }
+  }, [initialDate, isOpen]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const close = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+    onClose();
+  };
+
+  const confirm = () => {
+    if (!selectedDate) {
+      return;
+    }
+
+    onConfirm(parseDateInputValue(selectedDate));
+    close();
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-150"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          close();
+        }
+        if (event.key === 'Enter') {
+          confirm();
+        }
+      }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          close();
+        }
+      }}
+    >
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
+      <div
+        className="relative w-80 rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 dark:border-gray-700 dark:bg-gray-800"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-base font-semibold text-gray-800 dark:text-white">
+            <CalendarClock className="h-4 w-4 text-indigo-500" />
+            Timer date
+          </h3>
+          <button onClick={close} className="text-lg leading-none text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+        </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs text-gray-500 dark:text-gray-400">Date</span>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(event) => setSelectedDate(event.target.value)}
+            autoFocus
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-700/60 dark:text-white"
+          />
+        </label>
+
+        <div className="mt-6 flex">
+          <button
+            onClick={confirm}
+            disabled={!selectedDate}
+            className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function App() {
   const supportsDocumentPictureInPicture =
     typeof getDocumentPictureInPicture()?.requestWindow === 'function';
@@ -335,6 +445,8 @@ function App() {
   const [missionsList, setMissionsList] = useState<MissionOption[]>(() => parseStoredArray('missionsList', isMissionOption));
   const [modalInitialAffairs, setModalInitialAffairs] = useState<AffairOption[]>([]);
   const [modalInitialMissions, setModalInitialMissions] = useState<MissionOption[]>([]);
+  const [showAddTimerDateModal, setShowAddTimerDateModal] = useState(false);
+  const [addTimerInitialDate, setAddTimerInitialDate] = useState(() => new Date());
   const [pendingNameFocusTimerId, setPendingNameFocusTimerId] = useState<string | null>(null);
   const [currentStickyDate, setCurrentStickyDate] = useState<string | null>(null);
 
@@ -534,6 +646,18 @@ function App() {
 
   const addTimerRef = useRef(addTimer);
   useEffect(() => { addTimerRef.current = addTimer; });
+
+  const openAddTimerDateModal = () => {
+    setAddTimerInitialDate(new Date());
+    setShowAddTimerDateModal(true);
+  };
+
+  const handleAddTimerWithDate = (creationDate: Date) => {
+    addTimer({
+      name: 'Timer ' + (timers.length + 1),
+      creationDate,
+    });
+  };
 
   const selectedTimerCount = timers.filter(timer => timer.isChecked).length;
   const deleteConfirmLabel = selectedTimerCount > 0 ? `selected (${selectedTimerCount})` : 'All';
@@ -1234,7 +1358,7 @@ function App() {
         )}
         <FloatingButtonItem key="addTimer">
           <button
-            onClick={() => addTimer({})}
+            onClick={openAddTimerDateModal}
             className="flex items-center justify-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white p-2 h-14 w-14 rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
           >
             <Plus className="w-6 h-6" />
@@ -1266,7 +1390,7 @@ function App() {
         showWidget={activeWidgetId !== null}
         onDeleteAll={deleteAllTimers}
         onToggleAll={toggleAllTimers}
-        onAddTimer={() => addTimer({ name: 'Timer ' + (timers.length + 1) })}
+        onAddTimer={openAddTimerDateModal}
         onToggleSimpleMode={() => setIsSimpleMode(prev => !prev)}
         onToggleCheckingMode={() => setIsCheckingMode(prev => !prev)}
         onToggleDecimalTime={() => setShowDecimalTime(prev => !prev)}
@@ -1290,6 +1414,13 @@ function App() {
         initialMissions={modalInitialMissions}
         onClose={handleCloseAffairsAndMissionsModal}
         onSave={handleSaveAffairsAndMissions}
+      />
+
+      <AddTimerDateModal
+        isOpen={showAddTimerDateModal}
+        initialDate={addTimerInitialDate}
+        onClose={() => setShowAddTimerDateModal(false)}
+        onConfirm={handleAddTimerWithDate}
       />
 
       <div className="max-w-12xl mx-auto p-4 sm:p-8 flex-1 w-full">

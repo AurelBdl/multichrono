@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, GripVertical, Plus, ArrowBigUpDash, Check, CalendarClock } from 'lucide-react';
 import useTrelloDrag from './hooks/useTrelloCard';
@@ -98,6 +98,22 @@ const hasStoredItems = <T,>(key: string, validator: (value: unknown) => value is
 type WindowWithDocumentPictureInPicture = Window & {
   documentPictureInPicture?: DocumentPictureInPicture;
 };
+
+type TimerMissingMetadataFilter = 'all' | 'missing-affair-or-mission' | 'checked' | 'not-checked';
+
+type TimerFilters = {
+  searchTerm: string;
+  dateFrom: string;
+  dateTo: string;
+  missingMetadata: TimerMissingMetadataFilter;
+};
+
+const normalizeTimerSearchText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 
 const getDocumentPictureInPicture = () => {
   if (typeof window === 'undefined') {
@@ -432,6 +448,10 @@ function App() {
     const saved = localStorage.getItem('showByDate');
     return saved ? JSON.parse(saved) : false;
   });
+  const [showFilterBar, setShowFilterBar] = useState(() => {
+    const saved = localStorage.getItem('showFilterBar');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [showGoals, setShowGoals] = useState(() => {
     const saved = localStorage.getItem('showGoals');
     return saved ? JSON.parse(saved) : false;
@@ -449,6 +469,12 @@ function App() {
   const [addTimerInitialDate, setAddTimerInitialDate] = useState(() => new Date());
   const [pendingNameFocusTimerId, setPendingNameFocusTimerId] = useState<string | null>(null);
   const [currentStickyDate, setCurrentStickyDate] = useState<string | null>(null);
+  const [timerFilters, setTimerFilters] = useState<TimerFilters>({
+    searchTerm: '',
+    dateFrom: '',
+    dateTo: '',
+    missingMetadata: 'all',
+  });
 
   const [activeWidgetId, setActiveWidgetId] = useState<string | null>(null);
   const [pipContainer, setPipContainer] = useState<HTMLElement | null>(null);
@@ -475,6 +501,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('showByDate', JSON.stringify(showByDate));
   }, [showByDate]);
+
+  useEffect(() => {
+    localStorage.setItem('showFilterBar', JSON.stringify(showFilterBar));
+  }, [showFilterBar]);
 
   useEffect(() => {
     localStorage.setItem('showGoals', JSON.stringify(showGoals));
@@ -1219,7 +1249,12 @@ function App() {
   }
 
   const downloadJSON = () => {
-    const timersWithDecimalTime = timers.map(timer => ({
+    const shouldExportSelectedOnly = selectedTimerCount > 0;
+    const timersToExport = shouldExportSelectedOnly
+      ? timers.filter(timer => timer.isChecked)
+      : timers;
+
+    const timersWithDecimalTime = timersToExport.map(timer => ({
       ...timer,
       isRunning: false,
       decimalTime: convertToDecimalTime({
@@ -1322,6 +1357,49 @@ function App() {
     return formatTime(totalms).hours.toString().padStart(2, '0') + ':' + (formatTime(totalms).minutes % 60).toString().padStart(2, '0') + ':' + (formatTime(totalms).seconds % 60).toString().padStart(2, '0');
   };
 
+  const filteredTimers = useMemo(() => {
+    const normalizedSearchTerm = normalizeTimerSearchText(timerFilters.searchTerm.trim());
+
+    return timers.filter(timer => {
+      if (
+        normalizedSearchTerm &&
+        !normalizeTimerSearchText(timer.name).includes(normalizedSearchTerm)
+      ) {
+        return false;
+      }
+
+      const timerDateKey = getTimerDateKey(timer);
+      if (timerFilters.dateFrom && timerDateKey < timerFilters.dateFrom) {
+        return false;
+      }
+      if (timerFilters.dateTo && timerDateKey > timerFilters.dateTo) {
+        return false;
+      }
+
+      const isAffairMissing = timer.affairId == null || String(timer.affairId).trim() === '';
+      const isMissionMissing = timer.missionId == null || String(timer.missionId).trim() === '';
+
+      if (timerFilters.missingMetadata === 'missing-affair-or-mission') {
+        return isAffairMissing || isMissionMissing;
+      }
+      if (timerFilters.missingMetadata === 'checked') {
+        return timer.isChecked;
+      }
+      if (timerFilters.missingMetadata === 'not-checked') {
+        return !timer.isChecked;
+      }
+
+      return true;
+    });
+  }, [timerFilters, timers]);
+
+  const hasActiveTimerFilters =
+    timerFilters.searchTerm.trim() !== '' ||
+    timerFilters.dateFrom !== '' ||
+    timerFilters.dateTo !== '' ||
+    timerFilters.missingMetadata !== 'all';
+  const displayedTimers = showFilterBar ? filteredTimers : timers;
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900" onContextMenu={handleContextMenu} onDragOver={handleNativeDragOver} onDrop={handleDrop}>
       <FloatingButton
@@ -1386,6 +1464,7 @@ function App() {
         showDecimalTime={showDecimalTime}
         showMilliseconds={showMilliseconds}
         showByDate={showByDate} // New property
+        showFilterBar={showFilterBar}
         supportsWidget={supportsDocumentPictureInPicture}
         showWidget={activeWidgetId !== null}
         onDeleteAll={deleteAllTimers}
@@ -1400,12 +1479,16 @@ function App() {
         getTotalTime={getTotalTime}
         onImportJSON={handleFileUpload}
         onToggleByDate={() => setShowByDate(prev => !prev)} // New method
+        onToggleFilterBar={() => setShowFilterBar(prev => !prev)}
         onToggleWidget={() => toggleWidget()} // New method
         showGoals={showGoals}
         onToggleGoals={() => setShowGoals(prev => !prev)}
         showAffairsAndMissions={showAffairsAndMissions}
         onToggleAffairsAndMissions={handleToggleAffairsAndMissions}
         currentStickyDate={currentStickyDate}
+        timerFilters={timerFilters}
+        filteredTimersCount={filteredTimers.length}
+        onTimerFiltersChange={setTimerFilters}
       />
 
       <AffairsAndMissionsModal
@@ -1433,7 +1516,7 @@ function App() {
           onDragCancel={handleDragCancel}
         >
           {showByDate ? (
-            Object.entries(groupTimersByDate(timers)).map(([date, timers]) => {
+            Object.entries(groupTimersByDate(displayedTimers)).map(([date, timers]) => {
               const isDayFullyChecked = timers.length > 0 && timers.every(timer => timer.isChecked);
               return (
                 <DroppableDateGroup key={date} date={date} isActiveDrop={overDateKey === date}>
@@ -1520,10 +1603,10 @@ function App() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <SortableContext
-                items={timers}
+                items={displayedTimers}
                 strategy={rectSortingStrategy}
               >
-                {timers.map((timer) => (
+                {displayedTimers.map((timer) => (
                   <div key={timer.id} id={`timer-${timer.id}`} className="timer-container">
                     <SortableTimer
                       isCheckingMode={isCheckingMode}
@@ -1575,6 +1658,11 @@ function App() {
         {timers.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             No timers yet. Click "Add Timer" to create one!
+          </div>
+        )}
+        {showFilterBar && timers.length > 0 && displayedTimers.length === 0 && hasActiveTimerFilters && (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            No timers match the current filters.
           </div>
         )}
       </div>

@@ -67,6 +67,11 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
+.date-filter-input::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
 /* Custom scrollbar */
 /* Firefox only - no webkit-scrollbar support */
 @-moz-document url-prefix() {

@@ -348,7 +348,7 @@ function AddTimerDateModal({
     >
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] pointer-events-none" />
       <div
-        className="relative w-80 rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 dark:border-gray-700 dark:bg-gray-800"
+        className="relative w-[calc(100vw-2rem)] max-w-80 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl animate-in zoom-in-95 duration-150 dark:border-gray-700 dark:bg-gray-800 sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -366,7 +366,7 @@ function AddTimerDateModal({
             value={selectedDate}
             onChange={(event) => setSelectedDate(event.target.value)}
             autoFocus
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-700/60 dark:text-white"
+            className="block w-full min-w-0 max-w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-base text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-600 dark:bg-gray-700/60 dark:text-white"
           />
         </label>
 

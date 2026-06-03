@@ -43,7 +43,7 @@ export default function ConfirmDeleteButton({
       onClick={handleClick}
       className={`${rounded ? 'rounded-full h-14' : 'rounded-lg h-10'} flex shrink-0 items-center p-2 overflow-hidden text-white justify-center transition-all duration-300 ease-in-out bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600`}
       style={{
-        width: state === "idle" ? (rounded ? "" : "2.5rem") : confirmWidth,
+        width: state === "idle" ? (rounded ? "3.5rem" : "2.5rem") : confirmWidth,
       }}
     >
       <Trash2 className="w-6 h-6" />

@@ -62,6 +62,7 @@ function SettingsDropdown({
   showWidget,
   showGoals,
   showAffairsAndMissions,
+  hideFilterBarToggle = false,
   onToggleSimpleMode,
   onToggleCheckingMode,
   onToggleDecimalTime,
@@ -89,6 +90,7 @@ function SettingsDropdown({
   showWidget: boolean;
   showGoals: boolean;
   showAffairsAndMissions: boolean;
+  hideFilterBarToggle?: boolean;
   onToggleSimpleMode: () => void;
   onToggleCheckingMode: () => void;
   onToggleDecimalTime: () => void;
@@ -128,13 +130,15 @@ function SettingsDropdown({
           <CalendarClock className="w-4 h-4" />
           {showByDate ? 'Ungroup' : 'Group'} by date
         </button>
-        <button
-          onClick={() => onToggleFilterBar()}
-          className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          {showFilterBar ? 'Hide' : 'Show'} filters
-        </button>
+        {!hideFilterBarToggle && (
+          <button
+            onClick={() => onToggleFilterBar()}
+            className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {showFilterBar ? 'Hide' : 'Show'} filters
+          </button>
+        )}
         {supportsWidget && (
           <button
             onClick={() => onToggleWidget()} // New button
@@ -810,6 +814,7 @@ export default function Header({
                 showWidget={showWidget}
                 showGoals={showGoals}
                 showAffairsAndMissions={showAffairsAndMissions}
+                hideFilterBarToggle
                 onToggleSimpleMode={onToggleSimpleMode}
                 onToggleCheckingMode={onToggleCheckingMode}
                 onToggleDecimalTime={onToggleDecimalTime}

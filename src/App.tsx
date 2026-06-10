@@ -1469,7 +1469,8 @@ function App() {
         showWidget={activeWidgetId !== null}
         onDeleteAll={deleteAllTimers}
         onToggleAll={toggleAllTimers}
-        onAddTimer={openAddTimerDateModal}
+        onAddTimer={() => addTimer({})}
+        onAddTimerWithDate={openAddTimerDateModal}
         onToggleSimpleMode={() => setIsSimpleMode(prev => !prev)}
         onToggleCheckingMode={() => setIsCheckingMode(prev => !prev)}
         onToggleDecimalTime={() => setShowDecimalTime(prev => !prev)}

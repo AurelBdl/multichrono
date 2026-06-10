@@ -31,6 +31,7 @@ interface HeaderProps {
   onDeleteAll: () => void;
   onToggleAll: () => void;
   onAddTimer: () => void;
+  onAddTimerWithDate: () => void;
   onToggleSimpleMode: () => void;
   onToggleCheckingMode: () => void;
   onToggleDecimalTime: () => void;
@@ -45,6 +46,155 @@ interface HeaderProps {
   onToggleGoals: () => void;
   onToggleAffairsAndMissions: () => void;
   onTimerFiltersChange: React.Dispatch<React.SetStateAction<TimerFilters>>;
+}
+
+interface AddTimerButtonProps {
+  onAddTimer: () => void;
+  onAddTimerWithDate: () => void;
+}
+
+const ADD_TIMER_HOLD_DURATION_MS = 500;
+
+function AddTimerButton({ onAddTimer, onAddTimerWithDate }: AddTimerButtonProps) {
+  const frameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const isHoldingRef = useRef(false);
+  const hasCompletedHoldRef = useRef(false);
+  const progressBarRef = useRef<HTMLSpanElement>(null);
+
+  const clearFrame = () => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  };
+
+  const setProgress = (percent: number) => {
+    if (!progressBarRef.current) {
+      return;
+    }
+
+    progressBarRef.current.style.width = `${percent}%`;
+    progressBarRef.current.style.opacity = percent > 0 ? '1' : '0';
+  };
+
+  const resetHold = () => {
+    isHoldingRef.current = false;
+    hasCompletedHoldRef.current = false;
+    startTimeRef.current = null;
+    clearFrame();
+    setProgress(0);
+  };
+
+  const completeHold = () => {
+    if (hasCompletedHoldRef.current) {
+      return;
+    }
+
+    hasCompletedHoldRef.current = true;
+    isHoldingRef.current = false;
+    startTimeRef.current = null;
+    clearFrame();
+    setProgress(100);
+    onAddTimerWithDate();
+
+    window.setTimeout(() => {
+      setProgress(0);
+      hasCompletedHoldRef.current = false;
+    }, 180);
+  };
+
+  const startHold = () => {
+    if (isHoldingRef.current) {
+      return;
+    }
+
+    clearFrame();
+    isHoldingRef.current = true;
+    hasCompletedHoldRef.current = false;
+    startTimeRef.current = null;
+    setProgress(0);
+
+    const animate = (timestamp: number) => {
+      if (!isHoldingRef.current) {
+        return;
+      }
+
+      if (startTimeRef.current === null) {
+        startTimeRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - startTimeRef.current;
+      const nextProgress = Math.min((elapsed / ADD_TIMER_HOLD_DURATION_MS) * 100, 100);
+      setProgress(nextProgress);
+
+      if (elapsed >= ADD_TIMER_HOLD_DURATION_MS) {
+        completeHold();
+        return;
+      }
+
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+  };
+
+  const cancelHold = () => {
+    if (!isHoldingRef.current || hasCompletedHoldRef.current) {
+      return;
+    }
+
+    resetHold();
+  };
+
+  useEffect(() => () => clearFrame(), []);
+
+  return (
+    <button
+      type="button"
+      onPointerDown={(event) => {
+        if (event.button !== 0) {
+          return;
+        }
+
+        event.preventDefault();
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        startHold();
+      }}
+      onPointerUp={() => {
+        if (isHoldingRef.current && !hasCompletedHoldRef.current) {
+          cancelHold();
+          onAddTimer();
+        }
+      }}
+      onPointerCancel={cancelHold}
+      onPointerLeave={(event) => {
+        if ((event.buttons & 1) === 0) {
+          cancelHold();
+        }
+      }}
+      onClick={(event) => {
+        if (event.detail === 0) {
+          onAddTimer();
+        }
+      }}
+      onContextMenu={(event) => event.preventDefault()}
+      className="relative flex items-center gap-2 overflow-hidden rounded-lg bg-indigo-600 p-2 text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+      title="Click to add a timer. Hold to choose a date."
+      aria-label="Add timer. Hold to choose a date."
+    >
+      <span
+        ref={progressBarRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 left-0 rounded-[inherit] bg-indigo-400/70 transition-[width,opacity] duration-150 ease-out dark:bg-indigo-300/35"
+        style={{ width: '0%', opacity: 0 }}
+      />
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        <Plus className="h-6 w-6" />
+        <span className="hidden sm:inline">Add Timer</span>
+      </span>
+    </button>
+  );
 }
 
 function SettingsDropdown({
@@ -679,6 +829,7 @@ export default function Header({
   onDeleteAll,
   onToggleAll,
   onAddTimer,
+  onAddTimerWithDate,
   onToggleSimpleMode,
   onToggleCheckingMode,
   onToggleDecimalTime,
@@ -871,13 +1022,10 @@ export default function Header({
                 )}
               </button>
             )}
-            <button
-              onClick={onAddTimer}
-              className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
-            >
-              <Plus className="w-6 h-6" />
-              <span className="hidden sm:inline">Add Timer</span>
-            </button>
+            <AddTimerButton
+              onAddTimer={onAddTimer}
+              onAddTimerWithDate={onAddTimerWithDate}
+            />
             <div className="hidden sm:block relative" ref={desktopSettingsRef}>
               <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}

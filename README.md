@@ -62,6 +62,10 @@ A live total of all timer durations is displayed in the sticky header, always vi
 - **Export**: Download all your timers as a JSON file for backup or sharing.
 - **Import**: Load timers from a previously exported JSON file.
 
+The header also offers **Copy script** when `localStorage.setItem('showExportScriptOption', 'true')` is set in MultiTimer. Reopen the options menu after setting it. Choose an inclusive date range to copy a standalone Orisis reporting insertion script. It includes all timers in that period, regardless of checkboxes or active filters, and requires a mission for each timer with an exportable duration. Durations are rounded to two decimal hours; durations rounding to zero are omitted.
+
+Paste the script into the developer console of your logged-in Orisis application. It reads `userToken` and `userCollaboratorId` there, detects the API URL (or asks for it), and always uses payroll event ID `1`. It previews the insertions and requests confirmation, skips identical existing reports, and never updates existing reports. MultiTimer itself makes no requests to Orisis and does not store its token.
+
 ### 📱 Progressive Web App (PWA)
 
 Install MultiTimer on your device like a native app. It works offline, updates automatically, and supports standalone display with window controls overlay.

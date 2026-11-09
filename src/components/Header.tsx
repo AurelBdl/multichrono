@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { SquareCheck, Plus, Play, Pause, Settings, Square, Copy, Hourglass, Clock, Download, Moon, Sun, Upload, CalendarClock, PictureInPicture, Goal, BriefcaseBusiness, Search, X, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConfirmDeleteButton from '../ui/ConfirmDeleteButton';
 import { CSSTransition } from 'react-transition-group';
+import ExportScriptModal from './ExportScriptModal';
 
 type TimerMissingMetadataFilter = 'all' | 'missing-affair-or-mission' | 'checked' | 'not-checked';
 
@@ -199,6 +200,7 @@ function AddTimerButton({ onAddTimer, onAddTimerWithDate }: AddTimerButtonProps)
 
 function SettingsDropdown({
   timers,
+  onCopyScript,
   isOpen,
   onClose,
   isSimpleMode,
@@ -227,6 +229,7 @@ function SettingsDropdown({
   onToggleAffairsAndMissions,
 }: {
   timers: any[];
+  onCopyScript: () => void;
   isOpen: boolean;
   onClose: () => void;
   isSimpleMode: boolean;
@@ -345,6 +348,15 @@ function SettingsDropdown({
               : 'Export as JSON'}
           </button>
         }
+        {localStorage.getItem('showExportScriptOption') === 'true' && (
+          <button
+            onClick={() => { onCopyScript(); onClose(); }}
+            className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <Copy className="w-4 h-4" />
+            Copy script
+          </button>
+        )}
         <label className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
           <Upload className="w-4 h-4" />
           Import JSON
@@ -847,6 +859,7 @@ export default function Header({
   currentStickyDate,
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExportScriptOpen, setIsExportScriptOpen] = useState(false);
   const mobileSettingsRef = useRef<HTMLDivElement>(null);
   const desktopSettingsRef = useRef<HTMLDivElement>(null);
   const [displayedDate, setDisplayedDate] = useState<string | null>(null);
@@ -952,6 +965,7 @@ export default function Header({
               </button>
               <SettingsDropdown
                 timers={timers}
+                onCopyScript={() => setIsExportScriptOpen(true)}
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
@@ -1038,6 +1052,7 @@ export default function Header({
               </button>
               <SettingsDropdown
                 timers={timers}
+                onCopyScript={() => setIsExportScriptOpen(true)}
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 isSimpleMode={isSimpleMode}
@@ -1076,6 +1091,9 @@ export default function Header({
           />
         )}
       </div>
+      {isExportScriptOpen && (
+        <ExportScriptModal timers={timers} onClose={() => setIsExportScriptOpen(false)} />
+      )}
     </div>
   );
 }
